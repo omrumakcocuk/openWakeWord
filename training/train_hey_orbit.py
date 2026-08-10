@@ -96,6 +96,12 @@ HARD_NEGATIVE_TEXTS = {
     "tamam orbit",
     "peki orbit",
     "sayın orbit",
+    "soru bankası",
+    "günlük soru",
+    "soru bankası günlük soru",
+    "günlük soru bankası",
+    "bugün soru bankasından kaç soru çözdün",
+    "ders için günlük soru hedefini tamamladın mı",
 }
 
 VERY_HARD_NEGATIVE_TEXTS = {"hey orbitz", "hey or", "orbit"}

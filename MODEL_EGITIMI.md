@@ -145,8 +145,9 @@ filtreyi kapatır; eşiği yükseltmeden önce gerçek ve kısık pozitif kayıt
 recall yeniden ölçülmelidir.
 
 İlk tetiklemenin ardından art arda yanlış algılamayı önlemek için çalışma
-zamanı kapısı, skor `0.30` altında beş kare kalmadan yeniden kurulmaz. Bu ayar
-ilk tetiklemenin recall değerini değiştirmez; gerekirse
+zamanı kapısı, hem wake skoru `0.30` altında hem VAD skoru `0.10` altında beş
+kare kalmadan yeniden kurulmaz. Bu ayar ilk tetiklemenin recall değerini
+değiştirmez; gerekirse
 `--release-threshold` ve `--rearm-frames` ile kalibre edilebilir.
 
 Eşiği düşürmek yanlış tetikleme riskini artırabilir; yükseltmek ise hedef

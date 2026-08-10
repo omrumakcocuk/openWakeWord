@@ -105,6 +105,13 @@ NEGATIVE_PHRASES = [
     "tamam orbit",
     "peki orbit",
     "sayın orbit",
+    # Gerçek kullanımda yanlış tetikleme ürettiği bildirilen konuşma ailesi.
+    "soru bankası",
+    "günlük soru",
+    "soru bankası günlük soru",
+    "günlük soru bankası",
+    "bugün soru bankasından kaç soru çözdün",
+    "ders için günlük soru hedefini tamamladın mı",
 ]
 
 GENERIC_PHRASES = [

@@ -130,6 +130,28 @@ class DetectionGateTests(unittest.TestCase):
         self.assertFalse(gate.observe("hey_orbit", 0.10, 0.56))
         self.assertTrue(gate.observe("hey_orbit", 0.90, 0.64))
 
+    def test_continuous_speech_prevents_rearm(self) -> None:
+        gate = wake_word.DetectionGate(
+            cooldown_seconds=0,
+            rearm_frames=3,
+            rearm_vad_threshold=0.10,
+        )
+
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 0.08, speech_score=0.80))
+        for timestamp in (0.16, 0.24, 0.32, 0.40, 0.48):
+            self.assertFalse(
+                gate.observe("hey_orbit", 0.0, timestamp, speech_score=0.80)
+            )
+        for timestamp in (2.08, 4.08, 6.08, 8.08):
+            self.assertFalse(
+                gate.observe("hey_orbit", 0.90, timestamp, speech_score=0.80)
+            )
+        for timestamp in (8.16, 8.24, 8.32):
+            self.assertFalse(
+                gate.observe("hey_orbit", 0.0, timestamp, speech_score=0.01)
+            )
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 8.40, speech_score=0.80))
+
     def test_rejects_non_finite_observations(self) -> None:
         gate = wake_word.DetectionGate()
 
@@ -137,6 +159,8 @@ class DetectionGateTests(unittest.TestCase):
             gate.observe("hey_orbit", float("nan"), 0.08)
         with self.assertRaises(ValueError):
             gate.observe("hey_orbit", 0.90, float("inf"))
+        with self.assertRaises(ValueError):
+            gate.observe("hey_orbit", 0.90, 0.08, speech_score=float("nan"))
 
 
 class ModelPrimingTests(unittest.TestCase):
@@ -232,7 +256,7 @@ class AudioTimelineTests(unittest.TestCase):
             confirmation_frames=1,
             release_threshold=0.30,
             rearm_frames=5,
-            vad_threshold=0.10,
+            vad_threshold=0.0,
             list_devices=False,
             quiet=True,
         )

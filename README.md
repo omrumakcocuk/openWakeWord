@@ -105,10 +105,10 @@ tetikleme kararından çıkarır. Mevcut sentetik regresyon setinde hedef yakala
 ```
 
 Duyarlılığı değiştirmemek için varsayılan karar tek eşik-üstü kareyle
-verilir. Bir algılamadan sonra ise model skoru `0.30` altında beş kare
-(yaklaşık 400 ms) kalmadan algılayıcı yeniden kurulmaz. Bu histerezis, arka
-plan sesi sürerken aynı yüksek skorun iki saniyede bir tekrar tetiklemesini
-engeller; ilk algılama hassasiyetini değiştirmez. Gerekirse ayarlanabilir:
+verilir. Bir algılamadan sonra ise hem model skoru `0.30` altında hem de VAD
+skoru `0.10` altında beş kare (yaklaşık 400 ms) kalmadan algılayıcı yeniden
+kurulmaz. Böylece kesintisiz normal konuşma sırasında cooldown doldukça tekrar
+tetiklenmez; ilk algılama hassasiyeti değişmez. Gerekirse ayarlanabilir:
 
 ```bash
 .venv/bin/python wake_word.py --release-threshold 0.30 --rearm-frames 5

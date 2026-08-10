@@ -71,6 +71,7 @@ class DetectionGate:
     confirmation_frames: int = DEFAULT_CONFIRMATION_FRAMES
     release_threshold: float = DEFAULT_RELEASE_THRESHOLD
     rearm_frames: int = DEFAULT_REARM_FRAMES
+    rearm_vad_threshold: float | None = None
     _last_detection: float = field(default=-float("inf"), init=False)
     _candidate_name: str | None = field(default=None, init=False)
     _candidate_frames: int = field(default=0, init=False)
@@ -85,21 +86,34 @@ class DetectionGate:
             self.release_threshold,
             self.rearm_frames,
         )
+        if self.rearm_vad_threshold is not None:
+            validate_vad_threshold(self.rearm_vad_threshold)
 
-    def observe(self, name: str, score: float, timestamp: float) -> bool:
+    def observe(
+        self,
+        name: str,
+        score: float,
+        timestamp: float,
+        speech_score: float | None = None,
+    ) -> bool:
         """Bir model skorunu işle ve bu kare tetikliyorsa ``True`` döndür."""
 
         if not math.isfinite(score):
             raise ValueError("Model skoru sonlu bir sayı olmalı")
         if not math.isfinite(timestamp):
             raise ValueError("Algılama zamanı sonlu bir sayı olmalı")
+        if speech_score is not None and not math.isfinite(speech_score):
+            raise ValueError("Konuşma etkinliği skoru sonlu bir sayı olmalı")
 
         # Algılamadan sonra skor belirgin biçimde düşmeden kapıyı tekrar kurma.
         # Böylece sürekli arka plan sesi yüksek skor üretirse cooldown aralıklarıyla
         # art arda yanlış tetikleme oluşmaz. İlk algılama bundan etkilenmez.
         if not self._armed:
             self._clear_candidate()
-            if score <= self.release_threshold:
+            speech_is_quiet = self.rearm_vad_threshold is None or (
+                speech_score is not None and speech_score < self.rearm_vad_threshold
+            )
+            if score <= self.release_threshold and speech_is_quiet:
                 self._release_frames += 1
                 if self._release_frames >= self.rearm_frames:
                     self._armed = True
@@ -460,10 +474,10 @@ def main() -> int:
             print("Ardışık kare doğrulaması yok (tek kare)")
         else:
             print(f"Ardışık kare doğrulaması: {args.confirmation_frames} kare")
-        print(
-            "Yeniden kurma: "
-            f"skor <= {args.release_threshold:.2f} için {args.rearm_frames} kare"
-        )
+        rearm_condition = f"skor <= {args.release_threshold:.2f}"
+        if args.vad_threshold > 0:
+            rearm_condition += f" ve VAD < {args.vad_threshold:.2f}"
+        print(f"Yeniden kurma: {rearm_condition} için {args.rearm_frames} kare")
         print("Durdurmak için Ctrl+C tuşlarına basın.\n")
 
         detection_gate = DetectionGate(
@@ -472,6 +486,7 @@ def main() -> int:
             confirmation_frames=args.confirmation_frames,
             release_threshold=args.release_threshold,
             rearm_frames=args.rearm_frames,
+            rearm_vad_threshold=(args.vad_threshold if args.vad_threshold > 0 else None),
         )
 
         for frame_index, samples in enumerate(chunks):
@@ -482,9 +497,14 @@ def main() -> int:
                 else time.monotonic()
             )
             best_name, best_score = best_prediction(predictions)
+            vad_score = aligned_vad_score(model)
 
-            if detection_gate.observe(best_name, best_score, event_time):
-                vad_score = aligned_vad_score(model)
+            if detection_gate.observe(
+                best_name,
+                best_score,
+                event_time,
+                speech_score=vad_score,
+            ):
                 vad_text = "" if vad_score is None else f", VAD {vad_score:.3f}"
                 print(
                     f"\r[{time.strftime('%H:%M:%S')}] UYANDIRMA SÖZCÜĞÜ ALGILANDI: "
