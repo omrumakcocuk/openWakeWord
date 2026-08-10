@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.14"]
+
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-runtime.txt
+            requirements-dev.txt
+
+      - name: Bağımlılıkları kur
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip install --no-deps openwakeword==0.6.0
+
+      - name: Python sözdizimini denetle
+        run: |
+          python -m py_compile wake_word.py training/*.py tests/*.py
+
+      - name: Kurulum betiklerini denetle
+        run: bash -n setup.sh training/setup_training.sh
+
+      - name: Birim testleri
+        run: python -m unittest discover -s tests -v
+
+      - name: ONNX dosyalarını denetle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import onnx
+
+          paths = sorted(Path("models").glob("*.onnx"))
+          if not paths:
+              raise SystemExit("models/ altında ONNX dosyası bulunamadı")
+          for path in paths:
+              onnx.checker.check_model(onnx.load(path))
+              print(f"OK: {path}")
+          PY
+
+      - name: ONNX inference smoke testi
+        run: |
+          python - <<'PY'
+          import math
+          import numpy as np
+          from wake_word import (
+              CHUNK_SAMPLES,
+              DEFAULT_MODEL,
+              build_model,
+              reset_and_prime_model,
+              score_as_float,
+          )
+
+          model = build_model(DEFAULT_MODEL)
+          reset_and_prime_model(model)
+          predictions = model.predict(np.zeros(CHUNK_SAMPLES, dtype=np.int16))
+          if not predictions:
+              raise SystemExit("Model tahmin üretmedi")
+          scores = [score_as_float(value) for value in predictions.values()]
+          if not scores or not all(math.isfinite(score) for score in scores):
+              raise SystemExit(f"Geçersiz model skoru: {scores}")
+          print(predictions)
+          PY

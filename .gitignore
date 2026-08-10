@@ -1,12 +1,48 @@
+# Python ortamları ve önbellekler
 .venv/
 .train-venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Yerel araçlar ve editörler
 .agents/
 .codex/
 .tools/
 .python/
 .cache/
+.idea/
+.vscode/
+.DS_Store
+
+# Yerel yapılandırma ve olası ses kayıtları
+.env
+.env.*
+!.env.example
+recordings/
+false_positives/
+*.log
+
+# Üretilen veya çok büyük eğitim girdileri/çıktıları
 trainer/
 training/data/
 training/voices/
-__pycache__/
-*.pyc
+training/assets/
+training/vendor/
+training/openwakeword_output/
+training/runs/
+training/checkpoints/
+training/**/*.npy
+training/**/*.npz
+training/**/*.pt
+training/**/*.pth
+training/**/*.ckpt
+models/candidates/

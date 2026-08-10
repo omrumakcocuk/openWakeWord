@@ -1,0 +1,8 @@
+# Hafif, yerel train_hey_orbit.py ve sentetik örnek üreticisi içindir.
+# openWakeWord'un resmî büyük-veri train.py zinciri için
+# OPENWAKEWORD_EGITIMI.md belgesine bakın; o zincirin bağımlılıkları ayrıdır.
+-r requirements-runtime.txt
+onnx>=1.14,<2
+piper-tts>=1.3,<2
+scikit-learn>=1.3,<2
+scipy>=1.10,<2

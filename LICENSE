@@ -1,0 +1,16 @@
+License status
+==============
+
+No project-wide license has been selected for the original source code,
+documentation, configuration, or the custom hey_orbit model in this
+repository. Unless a file or component carries its own license notice, no
+permission to copy, modify, or redistribute that material is granted by this
+file.
+
+Third-party packages, models, datasets, and other components remain subject to
+their own licenses and terms. See THIRD_PARTY_NOTICES.md for provenance and
+known restrictions.
+
+This notice is not legal advice. The repository owner should choose an
+appropriate project license only after confirming that the custom model and
+its training inputs may be redistributed under compatible terms.

@@ -1,8 +1,3 @@
-# openwakeword, Python 3.14'te bulunmayan TFLite paketini zorunlu tuttuğu için
-# setup.sh tarafından ayrıca --no-deps seçeneğiyle kurulur. Uygulama ONNX kullanır.
-onnxruntime>=1.10,<2
-numpy>=1.21.6
-requests>=2,<3
-scipy>=1.3,<2
-scikit-learn>=1,<2
-tqdm>=4,<5
+# Geriye uyumluluk: ONNX runtime bağımlılıklarını kurar. openwakeword 0.6.0
+# bilinçli --no-deps kurulumu için yeni klonlarda setup.sh kullanılmalıdır.
+-r requirements-runtime.txt

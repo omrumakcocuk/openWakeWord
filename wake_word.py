@@ -4,14 +4,16 @@
 from __future__ import annotations
 
 import argparse
+import math
 import shutil
 import subprocess
 import sys
 import time
 import types
 import wave
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import BinaryIO, Iterator
+from typing import BinaryIO, Iterator, Mapping, Sequence
 
 import numpy as np
 
@@ -34,12 +36,101 @@ from openwakeword.model import Model
 ROOT = Path(__file__).resolve().parent
 MODELS_DIR = ROOT / "models"
 DEFAULT_MODEL = MODELS_DIR / "hey_orbit.onnx"
-CHUNK_SAMPLES = 1280  # 80 ms at 16 kHz
-CHUNK_BYTES = CHUNK_SAMPLES * 2  # signed 16-bit mono
-WAV_TAIL_CHUNKS = 5  # Dosya sonunda canlı akışı taklit eden 400 ms sessizlik
+SAMPLE_RATE_HZ = 16_000
+SAMPLE_CHANNELS = 1
+SAMPLE_WIDTH_BYTES = 2
+CHUNK_DURATION_SECONDS = 0.080
+CHUNK_SAMPLES = round(SAMPLE_RATE_HZ * CHUNK_DURATION_SECONDS)
+CHUNK_BYTES = CHUNK_SAMPLES * SAMPLE_WIDTH_BYTES
+WAV_TAIL_DURATION_SECONDS = 0.400
+WAV_TAIL_CHUNKS = round(WAV_TAIL_DURATION_SECONDS / CHUNK_DURATION_SECONDS)
+MELSPECTROGRAM_CONTEXT_CHUNKS = 10  # 76 mel karesi için yaklaşık 800 ms
+MODEL_CONTEXT_CHUNKS = 16  # hey_orbit.onnx modelinin yaklaşık 1,28 sn bağlamı
+MODEL_PRIME_CHUNKS = MELSPECTROGRAM_CONTEXT_CHUNKS + MODEL_CONTEXT_CHUNKS
+DEFAULT_THRESHOLD = 0.70
+DEFAULT_COOLDOWN_SECONDS = 2.0
+DEFAULT_CONFIRMATION_FRAMES = 1
+TIME_COMPARISON_ABS_TOLERANCE = 1e-12
 
 
-def parse_args() -> argparse.Namespace:
+@dataclass
+class DetectionGate:
+    """Skorları tetikleme kararına dönüştüren durum makinesi.
+
+    Varsayılan ``confirmation_frames=1`` mevcut tek-kare davranışını korur.
+    Daha katı ardışık-kare doğrulaması yalnızca CLI'da açıkça istenirse
+    etkinleşir.
+    """
+
+    threshold: float = DEFAULT_THRESHOLD
+    cooldown_seconds: float = DEFAULT_COOLDOWN_SECONDS
+    confirmation_frames: int = DEFAULT_CONFIRMATION_FRAMES
+    _last_detection: float = field(default=-float("inf"), init=False)
+    _candidate_name: str | None = field(default=None, init=False)
+    _candidate_frames: int = field(default=0, init=False)
+
+    def __post_init__(self) -> None:
+        validate_detection_settings(
+            self.threshold,
+            self.cooldown_seconds,
+            self.confirmation_frames,
+        )
+
+    def observe(self, name: str, score: float, timestamp: float) -> bool:
+        """Bir model skorunu işle ve bu kare tetikliyorsa ``True`` döndür."""
+
+        if not math.isfinite(score):
+            raise ValueError("Model skoru sonlu bir sayı olmalı")
+        if not math.isfinite(timestamp):
+            raise ValueError("Algılama zamanı sonlu bir sayı olmalı")
+
+        # Cooldown sırasındaki yüksek kareler yeni bir aday biriktirmesin.
+        elapsed = timestamp - self._last_detection
+        if elapsed < self.cooldown_seconds and not math.isclose(
+            elapsed,
+            self.cooldown_seconds,
+            rel_tol=0.0,
+            abs_tol=TIME_COMPARISON_ABS_TOLERANCE,
+        ):
+            self._clear_candidate()
+            return False
+
+        if score < self.threshold:
+            self._clear_candidate()
+            return False
+
+        if name == self._candidate_name:
+            self._candidate_frames += 1
+        else:
+            self._candidate_name = name
+            self._candidate_frames = 1
+
+        if self._candidate_frames < self.confirmation_frames:
+            return False
+
+        self._last_detection = timestamp
+        self._clear_candidate()
+        return True
+
+    def _clear_candidate(self) -> None:
+        self._candidate_name = None
+        self._candidate_frames = 0
+
+
+def validate_detection_settings(
+    threshold: float,
+    cooldown_seconds: float,
+    confirmation_frames: int,
+) -> None:
+    if not math.isfinite(threshold) or not 0 <= threshold <= 1:
+        raise ValueError("--threshold 0 ile 1 arasında sonlu bir sayı olmalı")
+    if not math.isfinite(cooldown_seconds) or cooldown_seconds < 0:
+        raise ValueError("--cooldown sonlu ve negatif olmayan bir sayı olmalı")
+    if confirmation_frames < 1:
+        raise ValueError("--confirmation-frames en az 1 olmalı")
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Mikrofonda Türkçe 'Hey Orbit' uyandırma ifadesini dinler."
     )
@@ -52,20 +143,37 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--threshold",
         type=float,
-        default=0.70,
-        help="Algılama eşiği, 0-1 (varsayılan: 0.70)",
+        default=DEFAULT_THRESHOLD,
+        help=f"Algılama eşiği, 0-1 (varsayılan: {DEFAULT_THRESHOLD:.2f})",
     )
     parser.add_argument(
         "--cooldown",
         type=float,
-        default=2.0,
-        help="İki algılama arasındaki en kısa süre, saniye (varsayılan: 2)",
+        default=DEFAULT_COOLDOWN_SECONDS,
+        help=(
+            "İki algılama arasındaki en kısa süre, saniye "
+            f"(varsayılan: {DEFAULT_COOLDOWN_SECONDS:g})"
+        ),
     )
-    parser.add_argument(
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument(
         "--device",
         help="ALSA kayıt aygıtı; örneğin hw:1,0 (varsayılan sistem aygıtı)",
     )
-    parser.add_argument("--wav", type=Path, help="Mikrofon yerine 16 kHz mono WAV dosyasını tara")
+    source_group.add_argument(
+        "--wav",
+        type=Path,
+        help=f"Mikrofon yerine {SAMPLE_RATE_HZ // 1000} kHz mono WAV dosyasını tara",
+    )
+    parser.add_argument(
+        "--confirmation-frames",
+        type=int,
+        default=DEFAULT_CONFIRMATION_FRAMES,
+        help=(
+            "Tetikleme için gereken art arda eşik-üstü kare sayısı; "
+            f"1 mevcut hassasiyeti korur (varsayılan: {DEFAULT_CONFIRMATION_FRAMES})"
+        ),
+    )
     parser.add_argument(
         "--list-devices",
         action="store_true",
@@ -76,11 +184,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Canlı skorları gizle, yalnızca algılamaları göster",
     )
-    args = parser.parse_args()
-    if not 0 <= args.threshold <= 1:
-        parser.error("--threshold 0 ile 1 arasında olmalı")
-    if args.cooldown < 0:
-        parser.error("--cooldown negatif olamaz")
+    args = parser.parse_args(argv)
+    try:
+        validate_detection_settings(
+            args.threshold,
+            args.cooldown,
+            args.confirmation_frames,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     return args
 
 
@@ -113,9 +225,9 @@ def microphone_chunks(device: str | None) -> Iterator[np.ndarray]:
         "-f",
         "S16_LE",
         "-r",
-        "16000",
+        str(SAMPLE_RATE_HZ),
         "-c",
-        "1",
+        str(SAMPLE_CHANNELS),
     ]
     if device:
         command.extend(["-D", device])
@@ -133,11 +245,18 @@ def microphone_chunks(device: str | None) -> Iterator[np.ndarray]:
                 continue
             yield np.frombuffer(raw, dtype=np.int16)
     finally:
-        process.terminate()
-        try:
-            process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        if process.stdout is not None:
+            process.stdout.close()
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                # Zombi süreç bırakmamak için kill sonrası mutlaka reap et.
+                process.wait()
+        else:
+            process.wait()
 
 
 def wav_chunks(path: Path) -> Iterator[np.ndarray]:
@@ -147,9 +266,9 @@ def wav_chunks(path: Path) -> Iterator[np.ndarray]:
             wav_file.getsampwidth(),
             wav_file.getframerate(),
         )
-        if audio_format != (1, 2, 16000):
+        if audio_format != (SAMPLE_CHANNELS, SAMPLE_WIDTH_BYTES, SAMPLE_RATE_HZ):
             raise ValueError(
-                "WAV dosyası 16 kHz, mono ve 16-bit PCM olmalı "
+                f"WAV dosyası {SAMPLE_RATE_HZ // 1000} kHz, mono ve 16-bit PCM olmalı "
                 f"(mevcut: kanal={audio_format[0]}, bit={audio_format[1] * 8}, "
                 f"hız={audio_format[2]} Hz)"
             )
@@ -188,42 +307,81 @@ def build_model(model_path: Path) -> Model:
 
 
 def score_as_float(value: object) -> float:
-    return float(np.asarray(value).reshape(-1)[0])
+    values = np.asarray(value).reshape(-1)
+    if values.size == 0:
+        raise ValueError("Model boş bir skor üretti")
+    score = float(values[0])
+    if not math.isfinite(score):
+        raise ValueError("Model sonlu olmayan bir skor üretti")
+    return score
+
+
+def best_prediction(predictions: Mapping[str, object]) -> tuple[str, float]:
+    if not predictions:
+        raise RuntimeError("Model herhangi bir tahmin üretmedi")
+    return max(
+        ((name, score_as_float(score)) for name, score in predictions.items()),
+        key=lambda item: item[1],
+    )
+
+
+def reset_and_prime_model(model: Model) -> None:
+    """Rastgele reset bağlamını deterministik sessizlikle tamamen değiştir."""
+
+    model.reset()
+    silence = np.zeros(CHUNK_SAMPLES, dtype=np.int16)
+    for _ in range(MODEL_PRIME_CHUNKS):
+        model.predict(silence)
+
+
+def wav_frame_end_time(frame_index: int) -> float:
+    """Bir WAV karesinin dosyanın ses zaman çizelgesindeki bitişini döndür."""
+
+    if frame_index < 0:
+        raise ValueError("Kare sırası negatif olamaz")
+    return (frame_index + 1) * CHUNK_DURATION_SECONDS
 
 
 def main() -> int:
     args = parse_args()
-    if args.list_devices:
-        return list_devices()
-
     try:
+        if args.list_devices:
+            return list_devices()
+
         model = build_model(args.model.resolve())
+        reset_and_prime_model(model)
         chunks = wav_chunks(args.wav.resolve()) if args.wav else microphone_chunks(args.device)
         source = str(args.wav) if args.wav else (args.device or "varsayılan mikrofon")
         print(f"Dinleniyor: {source}")
         print(f"Model: {args.model.name} | eşik: {args.threshold:.2f}")
-        print("Filtre ve ardışık kare doğrulaması yok")
+        if args.confirmation_frames == 1:
+            print("Ardışık kare doğrulaması yok (tek kare)")
+        else:
+            print(f"Ardışık kare doğrulaması: {args.confirmation_frames} kare")
         print("Durdurmak için Ctrl+C tuşlarına basın.\n")
 
-        last_detection = -float("inf")
+        detection_gate = DetectionGate(
+            threshold=args.threshold,
+            cooldown_seconds=args.cooldown,
+            confirmation_frames=args.confirmation_frames,
+        )
 
-        for samples in chunks:
+        for frame_index, samples in enumerate(chunks):
             predictions = model.predict(samples)
-            now = time.monotonic()
-            best_name, best_score = max(
-                ((name, score_as_float(score)) for name, score in predictions.items()),
-                key=lambda item: item[1],
+            event_time = (
+                wav_frame_end_time(frame_index)
+                if args.wav
+                else time.monotonic()
             )
-            frame_hit = best_score >= args.threshold
+            best_name, best_score = best_prediction(predictions)
 
-            if frame_hit and now - last_detection >= args.cooldown:
+            if detection_gate.observe(best_name, best_score, event_time):
                 print(
                     f"\r[{time.strftime('%H:%M:%S')}] UYANDIRMA SÖZCÜĞÜ ALGILANDI: "
                     f"{best_name} ({best_score:.3f}){' ' * 12}"
                 )
-                last_detection = now
                 # Algılanan ifadenin ses/model bağlamı sonraki kararı etkilemesin.
-                model.reset()
+                reset_and_prime_model(model)
             elif not args.quiet:
                 print(
                     f"\r{best_name}: {best_score:.3f}{' ' * 12}",
@@ -233,7 +391,7 @@ def main() -> int:
         if args.wav:
             print("\nDosya taraması tamamlandı.")
         return 0
-    except (FileNotFoundError, RuntimeError, ValueError, wave.Error) as exc:
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError, wave.Error) as exc:
         print(f"Hata: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:

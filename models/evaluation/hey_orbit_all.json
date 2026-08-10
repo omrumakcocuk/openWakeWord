@@ -1,0 +1,744 @@
+{
+  "schema_version": 2,
+  "evaluation_protocol": "openwakeword-streaming-v1",
+  "evaluation_role": "diagnostic_full_corpus",
+  "independent_holdout": false,
+  "dataset_generated_after_model": true,
+  "dataset_note": "Bütün sentetik corpus tanısal amaçlıdır ve kabul kanıtı değildir.",
+  "model": "models/hey_orbit.onnx",
+  "model_sha256": "dec3727f689842b553a5b828e5fcdef29f9fb0d2ca11e693bb56618ae82cc7fd",
+  "manifest": "training/data/manifest.json",
+  "manifest_sha256": "27913b4a292053def291c7ce617199b517ef97bcfc62f8741875ece07ad73b4f",
+  "evaluation_set_sha256": "470d0f53fe426243c806aecb9c965349cc94ce2e7cfa6466e1418af6051a100a",
+  "split": "all",
+  "threshold": 0.7,
+  "warmup_ms": 2080,
+  "built_in_wav_tail_ms": 400,
+  "additional_tail_ms": 0,
+  "positive_examples": 270,
+  "negative_examples": 186,
+  "positive_hits": 262,
+  "false_positive_hits": 28,
+  "recall": 0.9703703703703703,
+  "precision": 0.903448275862069,
+  "false_positive_rate": 0.15053763440860216,
+  "accuracy": 0.9210526315789473,
+  "confusion_matrix": {
+    "tn": 158,
+    "fp": 28,
+    "fn": 8,
+    "tp": 262
+  },
+  "per_phrase": [
+    {
+      "label": 1,
+      "text": "HEY    ORBIT",
+      "examples": 30,
+      "threshold_hits": 30,
+      "minimum_score": 0.8976700901985168,
+      "mean_score": 0.9920063475767772,
+      "median_score": 0.9991651773452759,
+      "maximum_score": 0.9999991655349731
+    },
+    {
+      "label": 1,
+      "text": "HEY ORBIT",
+      "examples": 30,
+      "threshold_hits": 30,
+      "minimum_score": 0.9272415637969971,
+      "mean_score": 0.9919841607411702,
+      "median_score": 0.9987208247184753,
+      "maximum_score": 0.9999983310699463
+    },
+    {
+      "label": 1,
+      "text": "Hey Orbit!",
+      "examples": 30,
+      "threshold_hits": 28,
+      "minimum_score": 0.5699512362480164,
+      "mean_score": 0.9157875100771586,
+      "median_score": 0.963659405708313,
+      "maximum_score": 0.9999979734420776
+    },
+    {
+      "label": 1,
+      "text": "Hey, Orbit",
+      "examples": 30,
+      "threshold_hits": 30,
+      "minimum_score": 0.7319301962852478,
+      "mean_score": 0.9816665192445119,
+      "median_score": 0.999478816986084,
+      "maximum_score": 0.9999982118606567
+    },
+    {
+      "label": 1,
+      "text": "HeyOrbit",
+      "examples": 30,
+      "threshold_hits": 25,
+      "minimum_score": 0.30038630962371826,
+      "mean_score": 0.857351009051005,
+      "median_score": 0.9553501605987549,
+      "maximum_score": 0.9996170997619629
+    },
+    {
+      "label": 1,
+      "text": "Heyorbit",
+      "examples": 30,
+      "threshold_hits": 30,
+      "minimum_score": 0.967966616153717,
+      "mean_score": 0.9967287679513296,
+      "median_score": 0.9998032450675964,
+      "maximum_score": 0.9999967813491821
+    },
+    {
+      "label": 1,
+      "text": "hey-orbit",
+      "examples": 30,
+      "threshold_hits": 30,
+      "minimum_score": 0.8773477077484131,
+      "mean_score": 0.994512528181076,
+      "median_score": 0.9992427229881287,
+      "maximum_score": 0.9999959468841553
+    },
+    {
+      "label": 1,
+      "text": "heyOrbit!",
+      "examples": 30,
+      "threshold_hits": 29,
+      "minimum_score": 0.5546108484268188,
+      "mean_score": 0.9538109083970387,
+      "median_score": 0.9888589382171631,
+      "maximum_score": 0.9999798536300659
+    },
+    {
+      "label": 1,
+      "text": "heyorbit",
+      "examples": 30,
+      "threshold_hits": 30,
+      "minimum_score": 0.9720634818077087,
+      "mean_score": 0.9979684273401896,
+      "median_score": 0.9997223317623138,
+      "maximum_score": 0.9999999403953552
+    },
+    {
+      "label": 0,
+      "text": "Akşam yemeği için ne hazırlayalım?",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.304813385009766e-06,
+      "mean_score": 5.543231964111328e-06,
+      "median_score": 5.3942203521728516e-06,
+      "maximum_score": 5.930662155151367e-06
+    },
+    {
+      "label": 0,
+      "text": "Bilgisayar güncellemeyi tamamladı.",
+      "examples": 3,
+      "threshold_hits": 3,
+      "minimum_score": 0.9905658960342407,
+      "mean_score": 0.9939400355021158,
+      "median_score": 0.9940873384475708,
+      "maximum_score": 0.9971668720245361
+    },
+    {
+      "label": 0,
+      "text": "Bir bardak su alabilir miyim?",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.023997187614440918,
+      "mean_score": 0.12609905997912088,
+      "median_score": 0.1542961597442627,
+      "maximum_score": 0.20000383257865906
+    },
+    {
+      "label": 0,
+      "text": "Bu akşam hangi filmi izleyelim?",
+      "examples": 3,
+      "threshold_hits": 2,
+      "minimum_score": 8.618831634521484e-05,
+      "mean_score": 0.6556499600410461,
+      "median_score": 0.9790108799934387,
+      "maximum_score": 0.9878528118133545
+    },
+    {
+      "label": 0,
+      "text": "Bugün hava oldukça güzel görünüyor.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.0005061626434326172,
+      "mean_score": 0.011149903138478598,
+      "median_score": 0.006499648094177246,
+      "maximum_score": 0.026443898677825928
+    },
+    {
+      "label": 0,
+      "text": "Bugünkü işler beklediğimden erken bitti.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00017309188842773438,
+      "mean_score": 0.045307825009028115,
+      "median_score": 0.041598886251449585,
+      "maximum_score": 0.09415149688720703
+    },
+    {
+      "label": 0,
+      "text": "Dışarı çıkmadan önce kapıyı kilitle.",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.024848580360412598,
+      "mean_score": 0.40324921409289044,
+      "median_score": 0.35676154494285583,
+      "maximum_score": 0.8281375169754028
+    },
+    {
+      "label": 0,
+      "text": "Hafta sonu sahilde yürüyüş yapabiliriz.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.0005589425563812256,
+      "mean_score": 0.007775366306304932,
+      "median_score": 0.00815919041633606,
+      "maximum_score": 0.01460796594619751
+    },
+    {
+      "label": 0,
+      "text": "Kahve hazır olunca bana haber ver.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.0961971282958984e-06,
+      "mean_score": 6.020069122314453e-05,
+      "median_score": 5.185604095458984e-06,
+      "maximum_score": 0.0001703202724456787
+    },
+    {
+      "label": 0,
+      "text": "Kitabın son bölümünü henüz okumadım.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 8.690357208251953e-05,
+      "mean_score": 0.0010590652624766033,
+      "median_score": 0.00019755959510803223,
+      "maximum_score": 0.002892732620239258
+    },
+    {
+      "label": 0,
+      "text": "Mutfaktaki ışıkları kapatır mısın?",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 9.000301361083984e-06,
+      "mean_score": 7.827083269755046e-05,
+      "median_score": 8.472800254821777e-05,
+      "maximum_score": 0.0001410841941833496
+    },
+    {
+      "label": 0,
+      "text": "Müzik listesini sırayla çalmaya devam et.",
+      "examples": 3,
+      "threshold_hits": 3,
+      "minimum_score": 0.9995740652084351,
+      "mean_score": 0.9997913837432861,
+      "median_score": 0.9998581409454346,
+      "maximum_score": 0.9999419450759888
+    },
+    {
+      "label": 0,
+      "text": "Pencereyi açınca oda serinledi.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 8.404254913330078e-06,
+      "mean_score": 0.00013341506322224936,
+      "median_score": 1.0371208190917969e-05,
+      "maximum_score": 0.0003814697265625
+    },
+    {
+      "label": 0,
+      "text": "Saat kaçta yola çıkmamız gerekiyor?",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.3942203521728516e-06,
+      "mean_score": 6.691614786783855e-05,
+      "median_score": 7.402896881103516e-05,
+      "maximum_score": 0.00012132525444030762
+    },
+    {
+      "label": 0,
+      "text": "Salondaki lambayı yüzde elliye getir.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 1.5348196029663086e-05,
+      "mean_score": 0.0010033448537190754,
+      "median_score": 0.00039121508598327637,
+      "maximum_score": 0.002603471279144287
+    },
+    {
+      "label": 0,
+      "text": "Sessiz mod bir saat sonra kapansın.",
+      "examples": 3,
+      "threshold_hits": 3,
+      "minimum_score": 0.999976396560669,
+      "mean_score": 0.9999920527140299,
+      "median_score": 0.9999998807907104,
+      "maximum_score": 0.9999998807907104
+    },
+    {
+      "label": 0,
+      "text": "Telefonumu masanın üzerinde bıraktım.",
+      "examples": 3,
+      "threshold_hits": 2,
+      "minimum_score": 0.014621824026107788,
+      "mean_score": 0.51549431681633,
+      "median_score": 0.7023921608924866,
+      "maximum_score": 0.8294689655303955
+    },
+    {
+      "label": 0,
+      "text": "Televizyonun sesini biraz azalt.",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.10674673318862915,
+      "mean_score": 0.4254715343316396,
+      "median_score": 0.22126999497413635,
+      "maximum_score": 0.9483978748321533
+    },
+    {
+      "label": 0,
+      "text": "Yarın sabah için bir alarm kur.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.001952052116394043,
+      "mean_score": 0.01760550340016683,
+      "median_score": 0.011900126934051514,
+      "maximum_score": 0.03896433115005493
+    },
+    {
+      "label": 0,
+      "text": "Yeni toplantı öğleden sonra başlayacak.",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.692243576049805e-06,
+      "mean_score": 0.0004100898901621501,
+      "median_score": 4.89652156829834e-05,
+      "maximum_score": 0.001175612211227417
+    },
+    {
+      "label": 0,
+      "text": "a orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 3.606081008911133e-05,
+      "mean_score": 0.00531583031018575,
+      "median_score": 0.007148832082748413,
+      "maximum_score": 0.008762598037719727
+    },
+    {
+      "label": 0,
+      "text": "ey orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.21639594435691833,
+      "mean_score": 0.26148844758669537,
+      "median_score": 0.2569150924682617,
+      "maximum_score": 0.311154305934906
+    },
+    {
+      "label": 0,
+      "text": "haydi orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.12468504905700684,
+      "mean_score": 0.27552388111750287,
+      "median_score": 0.1437782645225525,
+      "maximum_score": 0.5581083297729492
+    },
+    {
+      "label": 0,
+      "text": "hey",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.0008804500102996826,
+      "mean_score": 0.0031526883443196616,
+      "median_score": 0.0015294253826141357,
+      "maximum_score": 0.007048189640045166
+    },
+    {
+      "label": 0,
+      "text": "hey bora",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.008671939373016357,
+      "mean_score": 0.2565118471781413,
+      "median_score": 0.010188698768615723,
+      "maximum_score": 0.7506749033927917
+    },
+    {
+      "label": 0,
+      "text": "hey corbett",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.155801773071289e-06,
+      "mean_score": 0.00044658780097961426,
+      "median_score": 0.00012931227684020996,
+      "maximum_score": 0.0012052953243255615
+    },
+    {
+      "label": 0,
+      "text": "hey doruk",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00012794137001037598,
+      "mean_score": 0.003246237834294637,
+      "median_score": 0.003435850143432617,
+      "maximum_score": 0.006174921989440918
+    },
+    {
+      "label": 0,
+      "text": "hey gorbit",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.0060378313064575195,
+      "mean_score": 0.34524406989415485,
+      "median_score": 0.03104335069656372,
+      "maximum_score": 0.9986510276794434
+    },
+    {
+      "label": 0,
+      "text": "hey hey",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.0961971282958984e-06,
+      "mean_score": 0.011561413606007894,
+      "median_score": 0.002663910388946533,
+      "maximum_score": 0.03201523423194885
+    },
+    {
+      "label": 0,
+      "text": "hey kor bit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 7.814168930053711e-05,
+      "mean_score": 0.04663221041361491,
+      "median_score": 0.00010916590690612793,
+      "maximum_score": 0.13970932364463806
+    },
+    {
+      "label": 0,
+      "text": "hey korbi",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.001321345567703247,
+      "mean_score": 0.3095470170180003,
+      "median_score": 0.08023864030838013,
+      "maximum_score": 0.8470810651779175
+    },
+    {
+      "label": 0,
+      "text": "hey korbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 6.899237632751465e-05,
+      "mean_score": 0.012113630771636963,
+      "median_score": 0.012704819440841675,
+      "maximum_score": 0.0235670804977417
+    },
+    {
+      "label": 0,
+      "text": "hey kurbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.005825787782669067,
+      "mean_score": 0.04344614346822103,
+      "median_score": 0.0590665340423584,
+      "maximum_score": 0.06544610857963562
+    },
+    {
+      "label": 0,
+      "text": "hey motor",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 2.0444393157958984e-05,
+      "mean_score": 0.0025038719177246094,
+      "median_score": 0.0014351308345794678,
+      "maximum_score": 0.006056040525436401
+    },
+    {
+      "label": 0,
+      "text": "hey or",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.0010291039943695068,
+      "mean_score": 0.25757025678952533,
+      "median_score": 0.030146896839141846,
+      "maximum_score": 0.7415347695350647
+    },
+    {
+      "label": 0,
+      "text": "hey orada",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.013830989599227905,
+      "mean_score": 0.08718839287757874,
+      "median_score": 0.08917394280433655,
+      "maximum_score": 0.15856024622917175
+    },
+    {
+      "label": 0,
+      "text": "hey orbi",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.48616334795951843,
+      "mean_score": 0.6600618461767832,
+      "median_score": 0.5133116245269775,
+      "maximum_score": 0.9807105660438538
+    },
+    {
+      "label": 0,
+      "text": "hey orbita",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.04359981417655945,
+      "mean_score": 0.12849353750546774,
+      "median_score": 0.15646719932556152,
+      "maximum_score": 0.18541359901428223
+    },
+    {
+      "label": 0,
+      "text": "hey orbital",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.23527798056602478,
+      "mean_score": 0.3390214244524638,
+      "median_score": 0.37338560819625854,
+      "maximum_score": 0.40840068459510803
+    },
+    {
+      "label": 0,
+      "text": "hey orbitz",
+      "examples": 3,
+      "threshold_hits": 3,
+      "minimum_score": 0.7553297281265259,
+      "mean_score": 0.8602753082911173,
+      "median_score": 0.8549801111221313,
+      "maximum_score": 0.9705160856246948
+    },
+    {
+      "label": 0,
+      "text": "hey organizasyon",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.0012392401695251465,
+      "mean_score": 0.3501833975315094,
+      "median_score": 0.0542241632938385,
+      "maximum_score": 0.9950867891311646
+    },
+    {
+      "label": 0,
+      "text": "hey orhan",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00011584162712097168,
+      "mean_score": 0.03912290930747986,
+      "median_score": 0.000622093677520752,
+      "maximum_score": 0.11663079261779785
+    },
+    {
+      "label": 0,
+      "text": "hey orhan bey",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.0001722872257232666,
+      "mean_score": 0.14457186063130698,
+      "median_score": 0.03231137990951538,
+      "maximum_score": 0.40123191475868225
+    },
+    {
+      "label": 0,
+      "text": "hey orkun",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00038236379623413086,
+      "mean_score": 0.007874548435211182,
+      "median_score": 0.0056285560131073,
+      "maximum_score": 0.017612725496292114
+    },
+    {
+      "label": 0,
+      "text": "hey orçun",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 1.3142824172973633e-05,
+      "mean_score": 0.0020515124003092446,
+      "median_score": 3.3527612686157227e-05,
+      "maximum_score": 0.0061078667640686035
+    },
+    {
+      "label": 0,
+      "text": "hey otur",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.005042225122451782,
+      "mean_score": 0.014154543479283651,
+      "median_score": 0.01821810007095337,
+      "maximum_score": 0.0192033052444458
+    },
+    {
+      "label": 0,
+      "text": "hey oğlum",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.009805768728256226,
+      "mean_score": 0.295259952545166,
+      "median_score": 0.12414661049842834,
+      "maximum_score": 0.7518274784088135
+    },
+    {
+      "label": 0,
+      "text": "hey rabbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00020560622215270996,
+      "mean_score": 0.19557631015777588,
+      "median_score": 0.05063614249229431,
+      "maximum_score": 0.5358871817588806
+    },
+    {
+      "label": 0,
+      "text": "hey robert",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.0004864335060119629,
+      "mean_score": 0.04676573475201925,
+      "median_score": 0.0011472702026367188,
+      "maximum_score": 0.13866350054740906
+    },
+    {
+      "label": 0,
+      "text": "hey robot",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.155801773071289e-06,
+      "mean_score": 0.002973834673563639,
+      "median_score": 0.002852112054824829,
+      "maximum_score": 0.006064236164093018
+    },
+    {
+      "label": 0,
+      "text": "merhaba orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.27501106262207e-06,
+      "mean_score": 0.013180981079737345,
+      "median_score": 3.74913215637207e-05,
+      "maximum_score": 0.03950017690658569
+    },
+    {
+      "label": 0,
+      "text": "okay orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 9.799003601074219e-05,
+      "mean_score": 0.004518657922744751,
+      "median_score": 0.0009454190731048584,
+      "maximum_score": 0.012512564659118652
+    },
+    {
+      "label": 0,
+      "text": "or bit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.003150850534439087,
+      "mean_score": 0.01868531107902527,
+      "median_score": 0.01683172583580017,
+      "maximum_score": 0.03607335686683655
+    },
+    {
+      "label": 0,
+      "text": "orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00010833144187927246,
+      "mean_score": 0.008370021979014078,
+      "median_score": 0.0010980069637298584,
+      "maximum_score": 0.023903727531433105
+    },
+    {
+      "label": 0,
+      "text": "orbit buraya gel",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.008627980947494507,
+      "mean_score": 0.46245937546094257,
+      "median_score": 0.5127725005149841,
+      "maximum_score": 0.8659776449203491
+    },
+    {
+      "label": 0,
+      "text": "orbit orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.018428176641464233,
+      "mean_score": 0.030492126941680908,
+      "median_score": 0.02314266562461853,
+      "maximum_score": 0.04990553855895996
+    },
+    {
+      "label": 0,
+      "text": "orbital",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00046566128730773926,
+      "mean_score": 0.001668095588684082,
+      "median_score": 0.0020322799682617188,
+      "maximum_score": 0.002506345510482788
+    },
+    {
+      "label": 0,
+      "text": "orbiting",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00012227892875671387,
+      "mean_score": 0.006532947222391765,
+      "median_score": 0.0008982717990875244,
+      "maximum_score": 0.018578290939331055
+    },
+    {
+      "label": 0,
+      "text": "peki orbit",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.002595454454421997,
+      "mean_score": 0.2794201970100403,
+      "median_score": 0.009937793016433716,
+      "maximum_score": 0.8257273435592651
+    },
+    {
+      "label": 0,
+      "text": "sayın orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 0.00022292137145996094,
+      "mean_score": 0.026150763034820557,
+      "median_score": 0.0009728372097015381,
+      "maximum_score": 0.07725653052330017
+    },
+    {
+      "label": 0,
+      "text": "tamam orbit",
+      "examples": 3,
+      "threshold_hits": 0,
+      "minimum_score": 5.155801773071289e-06,
+      "mean_score": 5.344549814860026e-06,
+      "median_score": 5.3942203521728516e-06,
+      "maximum_score": 5.4836273193359375e-06
+    },
+    {
+      "label": 0,
+      "text": "the orbit",
+      "examples": 3,
+      "threshold_hits": 1,
+      "minimum_score": 0.00040411949157714844,
+      "mean_score": 0.36291928092638653,
+      "median_score": 0.08860430121421814,
+      "maximum_score": 0.9997494220733643
+    }
+  ]
+}

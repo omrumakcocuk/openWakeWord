@@ -1,6 +1,7 @@
 {
   "wake_phrase": "Hey Orbit",
   "language": "tr-TR",
+  "model_sha256": "dec3727f689842b553a5b828e5fcdef29f9fb0d2ca11e693bb56618ae82cc7fd",
   "threshold": 0.75,
   "train_examples": 12416,
   "validation_examples": 3064,
@@ -15,5 +16,33 @@
     "fn": 103,
     "tp": 1625
   },
-  "note": "Sentetik üç Türkçe Piper sesi üzerindeki ayrılmış doğrulama sonuçlarıdır."
+  "deterministic_streaming_evaluation": {
+    "evaluation_protocol": "openwakeword-streaming-v1",
+    "threshold": 0.7,
+    "warmup_ms": 2080,
+    "wav_tail_ms": 400,
+    "test": {
+      "role": "post_training_synthetic_regression_reference",
+      "independent_holdout": false,
+      "dataset_generated_after_model": true,
+      "evaluation_set_sha256": "115abc626f24c86719af61ffb5cab752ba95e932210098411362311fc104c474",
+      "positive_hits": 27,
+      "positive_examples": 27,
+      "false_positive_hits": 7,
+      "negative_examples": 62,
+      "report": "models/evaluation/hey_orbit_test.json"
+    },
+    "all": {
+      "role": "diagnostic_full_corpus",
+      "independent_holdout": false,
+      "dataset_generated_after_model": true,
+      "evaluation_set_sha256": "470d0f53fe426243c806aecb9c965349cc94ce2e7cfa6466e1418af6051a100a",
+      "positive_hits": 262,
+      "positive_examples": 270,
+      "false_positive_hits": 28,
+      "negative_examples": 186,
+      "report": "models/evaluation/hey_orbit_all.json"
+    }
+  },
+  "note": "0.75 metrikleri eski sentetik sabit-öznitelik ayrımına aittir. 0.70 WAV'ları modelden sonra üretildi; aynı TTS sesleri/ifade ailesi ve post-hoc split nedeniyle test raporu yalnız regresyon referansıdır. Gerçek insan/mikrofon testi değildir."
 }

@@ -1,0 +1,6 @@
+# Birim testleri hafif eğitim dışa aktarıcısını da içe aktarır; Piper
+# yalnızca veri üretiminde gerektiği için geliştirme ortamına eklenmez.
+-r requirements-runtime.txt
+onnx>=1.14,<2
+scikit-learn>=1.3,<2
+scipy>=1.10,<2

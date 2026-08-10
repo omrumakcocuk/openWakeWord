@@ -23,7 +23,7 @@ Model bu bilgisayarda gerçekten eğitildi; başka bir modelin adı değiştiril
 - Resmî openWakeWord mel-spektrogram ve Google speech-embedding ONNX omurgası
   kullanıldı. Üst sınıflandırıcı iki gizli katmanlı küçük bir sinir ağıdır.
 
-## Ayrılmış sentetik doğrulama sonucu
+## Eğitim sırasındaki sentetik doğrulama sonucu
 
 | Ölçüm | Sonuç |
 |---|---:|
@@ -36,22 +36,50 @@ Model bu bilgisayarda gerçekten eğitildi; başka bir modelin adı değiştiril
 | ROC AUC | %97,26 |
 | Yanlış olumlu / yanlış olumsuz | 131 / 103 |
 
-Uygulamanın güncel 80 ms akış yolunda VAD, RMS ve ardışık kare doğrulaması yoktur.
-`0,70` eşiğinde ve WAV sonrası 400 ms akış kuyruğuyla pozitiflerin 258/270'i
-algılandı. Yeni `heyOrbit!` grubu 27/30, `HEY ORBIT` ve `HEY    ORBIT`
-gruplarının her biri 30/30 algılandı. Tek başına “orbit” 0/3 tetikleme verdi.
-Toplam 186 sentetik negatif örneğin 19'u yanlış tetiklendi. Bu tek-kare test modu
-recall'u yükseltirken false-positive riskini de artırır. Sentetik testler gerçek
-oda/mikrofon performansını garanti etmez.
+Bu tablo model üretilirken kullanılan eski sabit-öznitelik ayrımına aittir.
+Uygulamanın gerçek akış davranışını veya saat başına yanlış tetiklemeyi tek
+başına göstermez.
+
+## Deterministik 80 ms akış testi
+
+openWakeWord'ün rastgele reset tamponu her dosyadan önce 2.080 ms sessizlikle
+tamamen değiştirilir. Test `0,70` eşiği, tek-kare kararı ve WAV sonrası 400 ms
+akış kuyruğuyla yapılır:
+
+| Bölüm | Pozitif yakalama | Yanlış pozitif |
+|---|---:|---:|
+| Sabit manifest `test` regresyon seti | 27/27 | 7/62 |
+| Bütün temel sentetik kayıtlar (tanısal) | 262/270 | 28/186 |
+
+`test` setinde dokuz hedef varyasyonun her biri 3/3 algılandı. Bu WAV'lar kabul
+edilmiş model eğitildikten sonra yeniden üretildi; ancak aynı üç sentetik Piper
+sesi ve aynı ifade ailesi kullanıldı, split de modelden önce sabitlenmemişti.
+Dolayısıyla `27/27` bağımsız genelleme sonucu değil, davranışın gerilemesini
+önleyen **post-training sentetik regresyon referansıdır**. Yeni hatla eğitilen
+aday için `test` temel kayıtları eğitimden ayrı tutulur; yine de aynı üç
+sentetik konuşmacı splitler arasında bulunduğundan konuşmacı genellemesi
+ölçülmez.
+
+Bütün veride `HEY ORBIT`, `HEY    ORBIT`, `Hey, Orbit`, `Heyorbit`,
+`hey-orbit` ve `heyorbit` grupları 30/30; `Hey Orbit!` 28/30, `HeyOrbit`
+25/30 ve `heyOrbit!` 29/30 algılandı. Tek başına `orbit` 0/3 tetikleme verdi.
+Ayrıntılı model, manifest ve WAV-içerik SHA-256 değerleri
+`models/evaluation/` altındadır.
+
+Bu sonuçlar sentetiktir; gerçek oda/mikrofon performansını veya saat başına
+yanlış tetiklemeyi garanti etmez.
 
 Akış testi yeniden çalıştırmak için:
 
 ```bash
-.venv/bin/python training/evaluate_streaming.py --threshold 0.70
+.venv/bin/python training/evaluate_streaming.py --split test --threshold 0.70
 ```
 
-Makine tarafından yazılan ayrıntılı ölçümler `models/hey_orbit_metrics.json`
-dosyasındadır.
+Bu komut `training/data/manifest.json` ve onun WAV dosyalarını gerektirir.
+Bunlar boyut/lisans nedeniyle Git'e eklenmediğinden temiz klonda bulunmaz.
+
+Özet `models/hey_orbit_metrics.json`, ifade bazlı ayrıntılar ise
+`models/evaluation/*.json` dosyalarındadır.
 
 ## Yeniden üretme
 
@@ -61,11 +89,40 @@ Türkçe temel sesler:
 .train-venv/bin/python training/generate_turkish_samples.py
 ```
 
-Öznitelik çıkarma, eğitim ve ONNX dışa aktarma:
+`training/data/` zaten varsa betik onu korur. Baştan üretmek istediğinizden
+eminseniz `--replace-existing` ekleyin; yeni set tümüyle doğrulanmadan eski set
+değiştirilmez.
+
+Öznitelik çıkarma, eğitim ve ONNX adayı dışa aktarma:
 
 ```bash
-.venv/bin/python training/train_hey_orbit.py
+.train-venv/bin/python training/train_hey_orbit.py \
+  --train-splits train dev --split test
 ```
+
+Eğitim varsayılan olarak kabul edilmiş modeli ezmez; adayı
+`models/candidates/` altına yazar. Adayı aynı manifest ve ayarlarla test edip
+recall-korumalı kapıdan geçirin:
+
+```bash
+.venv/bin/python training/evaluate_streaming.py \
+  --model models/candidates/hey_orbit_candidate.onnx \
+  --split test --json-output /tmp/hey_orbit_candidate_test.json
+
+.venv/bin/python training/compare_evaluations.py \
+  models/evaluation/hey_orbit_test.json \
+  /tmp/hey_orbit_candidate_test.json \
+  --baseline-model models/hey_orbit.onnx \
+  --candidate-model models/candidates/hey_orbit_candidate.onnx \
+  --candidate-training-metrics models/candidates/hey_orbit_candidate_metrics.json
+```
+
+Karşılaştırıcı toplam pozitif yakalama, her hedef varyasyonun yakalaması
+ve yanlış pozitif sayısı gerilemediğinde başarılı olur. Ayrıca her negatif
+ifadeyi ayrı denetler; raporun gerçek model, manifest ve WAV içerik hashleriyle
+eşleşmesini zorunlu tutar. Kabul kapısı yalnız `test` splitini kabul eder.
+`--split all` yalnız tanısal incelemedir; eğitim verisini içerdiği için kabul
+kanıtı olarak kullanılmamalıdır.
 
 Eğitim veri üreticisi `piper-tts`; sınıflandırma ortamı `openwakeword`,
 `scikit-learn` ve `onnx` paketlerini gerektirir. Türkçe ses modelleri
@@ -81,4 +138,6 @@ yeniden eğitilebilir. Uygulamanın varsayılan çalışma eşiği `0.70` değer
 .venv/bin/python wake_word.py --threshold 0.70
 ```
 
-Eşiği düşürmek eksik ifadelerin yeniden tetikleme riskini artırabilir.
+Eşiği düşürmek yanlış tetikleme riskini artırabilir; yükseltmek ise hedef
+ifadeleri kaçırabilir. Kalıcı eşik değişikliği gerçek pozitif ve uzun süreli
+negatif kayıtlarla birlikte ölçülmelidir.

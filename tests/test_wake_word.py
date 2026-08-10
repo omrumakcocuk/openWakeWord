@@ -1,0 +1,223 @@
+from __future__ import annotations
+
+import argparse
+import contextlib
+import io
+import subprocess
+import unittest
+from pathlib import Path
+from unittest import mock
+
+import numpy as np
+
+import wake_word
+
+
+class ParseArgsTests(unittest.TestCase):
+    def parse_error(self, *arguments: str) -> None:
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                wake_word.parse_args(arguments)
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_defaults_keep_existing_detection_sensitivity(self) -> None:
+        args = wake_word.parse_args(())
+
+        self.assertEqual(args.threshold, 0.70)
+        self.assertEqual(args.confirmation_frames, 1)
+        self.assertEqual(args.cooldown, 2.0)
+
+    def test_wav_and_device_are_mutually_exclusive(self) -> None:
+        self.parse_error("--wav", "sample.wav", "--device", "hw:1,0")
+
+    def test_rejects_non_finite_numeric_arguments(self) -> None:
+        for option, value in (
+            ("--threshold", "nan"),
+            ("--threshold", "inf"),
+            ("--cooldown", "nan"),
+            ("--cooldown", "inf"),
+        ):
+            with self.subTest(option=option, value=value):
+                self.parse_error(option, value)
+
+    def test_rejects_invalid_confirmation_frame_count(self) -> None:
+        self.parse_error("--confirmation-frames", "0")
+
+
+class DetectionGateTests(unittest.TestCase):
+    def test_default_gate_triggers_on_one_threshold_frame(self) -> None:
+        gate = wake_word.DetectionGate()
+
+        self.assertTrue(gate.observe("hey_orbit", 0.70, 0.08))
+
+    def test_optional_confirmation_requires_consecutive_frames(self) -> None:
+        gate = wake_word.DetectionGate(
+            threshold=0.70,
+            cooldown_seconds=0,
+            confirmation_frames=2,
+        )
+
+        self.assertFalse(gate.observe("hey_orbit", 0.80, 0.08))
+        self.assertFalse(gate.observe("hey_orbit", 0.20, 0.16))
+        self.assertFalse(gate.observe("hey_orbit", 0.80, 0.24))
+        self.assertTrue(gate.observe("hey_orbit", 0.75, 0.32))
+
+    def test_confirmation_does_not_mix_model_names(self) -> None:
+        gate = wake_word.DetectionGate(
+            threshold=0.70,
+            cooldown_seconds=0,
+            confirmation_frames=2,
+        )
+
+        self.assertFalse(gate.observe("first", 0.90, 0.08))
+        self.assertFalse(gate.observe("second", 0.90, 0.16))
+        self.assertTrue(gate.observe("second", 0.90, 0.24))
+
+    def test_cooldown_does_not_accumulate_candidate_frames(self) -> None:
+        gate = wake_word.DetectionGate(
+            threshold=0.70,
+            cooldown_seconds=2.0,
+            confirmation_frames=2,
+        )
+
+        self.assertFalse(gate.observe("hey_orbit", 0.90, 0.08))
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 0.16))
+        self.assertFalse(gate.observe("hey_orbit", 0.90, 1.00))
+        self.assertFalse(gate.observe("hey_orbit", 0.90, 2.16))
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 2.24))
+
+    def test_exact_cooldown_boundary_is_not_lost_to_float_rounding(self) -> None:
+        gate = wake_word.DetectionGate(cooldown_seconds=2.0)
+
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 0.32))
+        # 2.32 - 0.32 ikili kayan noktada 2.0'ın çok az altında kalabilir.
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 2.32))
+
+    def test_rejects_non_finite_observations(self) -> None:
+        gate = wake_word.DetectionGate()
+
+        with self.assertRaises(ValueError):
+            gate.observe("hey_orbit", float("nan"), 0.08)
+        with self.assertRaises(ValueError):
+            gate.observe("hey_orbit", 0.90, float("inf"))
+
+
+class ModelPrimingTests(unittest.TestCase):
+    def test_reset_is_followed_by_full_silent_context(self) -> None:
+        class FakeModel:
+            def __init__(self) -> None:
+                self.reset_calls = 0
+                self.frames: list[np.ndarray] = []
+
+            def reset(self) -> None:
+                self.reset_calls += 1
+
+            def predict(self, samples: np.ndarray) -> dict[str, float]:
+                self.frames.append(samples.copy())
+                return {"hey_orbit": 0.0}
+
+        model = FakeModel()
+
+        wake_word.reset_and_prime_model(model)  # type: ignore[arg-type]
+
+        self.assertEqual(model.reset_calls, 1)
+        self.assertEqual(len(model.frames), wake_word.MODEL_PRIME_CHUNKS)
+        for samples in model.frames:
+            self.assertEqual(samples.dtype, np.int16)
+            self.assertEqual(samples.shape, (wake_word.CHUNK_SAMPLES,))
+            self.assertFalse(np.any(samples))
+
+
+class AudioTimelineTests(unittest.TestCase):
+    def test_wav_frame_time_uses_audio_duration(self) -> None:
+        self.assertAlmostEqual(wake_word.wav_frame_end_time(0), 0.08)
+        self.assertAlmostEqual(wake_word.wav_frame_end_time(25), 2.08)
+
+    def test_wav_main_applies_cooldown_on_audio_timeline(self) -> None:
+        args = argparse.Namespace(
+            model=Path("models/hey_orbit.onnx"),
+            threshold=0.70,
+            cooldown=2.0,
+            device=None,
+            wav=Path("sample.wav"),
+            confirmation_frames=1,
+            list_devices=False,
+            quiet=True,
+        )
+
+        class FakeModel:
+            def __init__(self) -> None:
+                self.frame_index = 0
+
+            def predict(self, _samples: np.ndarray) -> dict[str, float]:
+                score = 0.90 if self.frame_index in (0, 26) else 0.0
+                self.frame_index += 1
+                return {"hey_orbit": score}
+
+        frames = [
+            np.zeros(wake_word.CHUNK_SAMPLES, dtype=np.int16)
+            for _ in range(27)
+        ]
+        output = io.StringIO()
+        with (
+            mock.patch.object(wake_word, "parse_args", return_value=args),
+            mock.patch.object(wake_word, "build_model", return_value=FakeModel()),
+            mock.patch.object(wake_word, "wav_chunks", return_value=iter(frames)),
+            mock.patch.object(wake_word, "reset_and_prime_model"),
+            mock.patch.object(wake_word.time, "monotonic", return_value=0.0),
+            contextlib.redirect_stdout(output),
+        ):
+            return_code = wake_word.main()
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(output.getvalue().count("UYANDIRMA SÖZCÜĞÜ ALGILANDI"), 2)
+
+
+class MicrophoneCleanupTests(unittest.TestCase):
+    def test_killed_arecord_process_is_waited_for(self) -> None:
+        class FakeProcess:
+            def __init__(self) -> None:
+                self.stdout = io.BytesIO(b"\0" * wake_word.CHUNK_BYTES)
+                self.returncode = None
+                self.calls: list[str] = []
+                self.wait_count = 0
+
+            def poll(self) -> None:
+                return None
+
+            def terminate(self) -> None:
+                self.calls.append("terminate")
+
+            def wait(self, timeout: float | None = None) -> int:
+                self.calls.append("wait")
+                self.wait_count += 1
+                if self.wait_count == 1:
+                    raise subprocess.TimeoutExpired("arecord", timeout)
+                return -9
+
+            def kill(self) -> None:
+                self.calls.append("kill")
+
+        process = FakeProcess()
+        with (
+            mock.patch.object(wake_word.shutil, "which", return_value="/usr/bin/arecord"),
+            mock.patch.object(wake_word.subprocess, "Popen", return_value=process),
+        ):
+            chunks = wake_word.microphone_chunks(None)
+            samples = next(chunks)
+            chunks.close()
+
+        self.assertEqual(samples.shape, (wake_word.CHUNK_SAMPLES,))
+        self.assertEqual(process.calls, ["terminate", "wait", "kill", "wait"])
+
+
+class PredictionTests(unittest.TestCase):
+    def test_best_prediction_rejects_empty_or_non_finite_results(self) -> None:
+        with self.assertRaises(RuntimeError):
+            wake_word.best_prediction({})
+        with self.assertRaises(ValueError):
+            wake_word.best_prediction({"hey_orbit": float("nan")})
+
+
+if __name__ == "__main__":
+    unittest.main()

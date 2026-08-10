@@ -28,9 +28,12 @@ Python 3.10/3.11 ortamı veya uyumlu bir container kullanılmalıdır.
 
 ACAV dosyası yaklaşık 17,3 GB olduğundan kullanıcı onayı olmadan indirilmez.
 RIR ve background klasörleri boşken resmî `train.py` çalıştırılmamalıdır.
-Resmî örnekteki Piper üreticisinin varsayılan İngilizce sesi Türkçe telaffuz için
-körlemesine kullanılmamalıdır. Türkçe pozitifler mevcut DFKI/Fahrettin/Fettah
-üreticisiyle hazırlanmalı veya Türkçe destekli eşdeğer bir üretici seçilmelidir.
+Resmî örnekteki Piper üreticisinin varsayılan İngilizce sesi Türkçe telaffuz
+için körlemesine kullanılmamalıdır. Türkçe pozitifler, veri kaynağı ve kullanım
+hakkı doğrulanmış Türkçe seslerle veya açık izinli gerçek konuşmacı kayıtlarıyla
+hazırlanmalıdır. Fahrettin/Fettah sesleri upstream'den kaldırıldığı ve provenans
+beyanları sorgulandığı için yeni eğitim girdisi olarak önerilmez; ayrıntılar
+`THIRD_PARTY_NOTICES.md` içindedir.
 
 ## Nelerin faydası var?
 
