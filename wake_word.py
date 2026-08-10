@@ -433,17 +433,31 @@ def aligned_vad_score(model: Model) -> float | None:
     return max(float(value) for value in frames)
 
 
-def reset_and_prime_model(model: Model) -> None:
-    """Rastgele reset bağlamını deterministik sessizlikle tamamen değiştir."""
+def reset_and_prime_model(
+    model: Model,
+    *,
+    preserve_vad_context: bool = False,
+) -> None:
+    """Wake bağlamını sessizlikle prime et; gerekirse gerçek VAD geçmişini koru."""
 
     model.reset()
     vad = getattr(model, "vad", None)
-    if vad is not None:
+    if vad is not None and not preserve_vad_context:
         vad.reset_states()
         vad.prediction_buffer.clear()
+    # Wake modelini prime eden yapay sessizlik, canlı konuşmanın VAD geçmişini
+    # ezmemeli. Aksi halde tetikleme sonrası ortam yanlışlıkla sessiz görünür ve
+    # kapı konuşma sürerken yeniden kurulabilir.
+    original_vad_threshold = getattr(model, "vad_threshold", 0.0)
+    if vad is not None and preserve_vad_context:
+        model.vad_threshold = 0.0
     silence = np.zeros(CHUNK_SAMPLES, dtype=np.int16)
-    for _ in range(MODEL_PRIME_CHUNKS):
-        model.predict(silence)
+    try:
+        for _ in range(MODEL_PRIME_CHUNKS):
+            model.predict(silence)
+    finally:
+        if vad is not None and preserve_vad_context:
+            model.vad_threshold = original_vad_threshold
 
 
 def wav_frame_end_time(frame_index: int) -> float:
@@ -511,7 +525,7 @@ def main() -> int:
                     f"{best_name} ({best_score:.3f}{vad_text}){' ' * 12}"
                 )
                 # Algılanan ifadenin ses/model bağlamı sonraki kararı etkilemesin.
-                reset_and_prime_model(model)
+                reset_and_prime_model(model, preserve_vad_context=True)
             elif not args.quiet:
                 print(
                     f"\r{best_name}: {best_score:.3f}{' ' * 12}",

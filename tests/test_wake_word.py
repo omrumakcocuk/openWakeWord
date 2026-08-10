@@ -218,6 +218,42 @@ class ModelPrimingTests(unittest.TestCase):
         self.assertEqual(model.vad.reset_calls, 1)
         self.assertEqual(model.vad.prediction_buffer, [])
 
+    def test_post_detection_prime_preserves_live_vad_context(self) -> None:
+        class FakeVad:
+            def __init__(self) -> None:
+                self.reset_calls = 0
+                self.prediction_buffer = [0.72, 0.81, 0.76]
+
+            def reset_states(self) -> None:
+                self.reset_calls += 1
+
+        class FakeModel:
+            def __init__(self) -> None:
+                self.vad = FakeVad()
+                self.vad_threshold = 0.10
+                self.predict_calls = 0
+
+            def reset(self) -> None:
+                pass
+
+            def predict(self, _samples: np.ndarray) -> dict[str, float]:
+                self.predict_calls += 1
+                if self.vad_threshold > 0:
+                    self.vad.prediction_buffer.append(0.0)
+                return {"hey_orbit": 0.0}
+
+        model = FakeModel()
+
+        wake_word.reset_and_prime_model(  # type: ignore[arg-type]
+            model,
+            preserve_vad_context=True,
+        )
+
+        self.assertEqual(model.vad.reset_calls, 0)
+        self.assertEqual(model.vad.prediction_buffer, [0.72, 0.81, 0.76])
+        self.assertEqual(model.vad_threshold, 0.10)
+        self.assertEqual(model.predict_calls, wake_word.MODEL_PRIME_CHUNKS)
+
 
 class ModelConstructionTests(unittest.TestCase):
     def test_build_model_attaches_repository_vad_when_enabled(self) -> None:
