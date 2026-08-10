@@ -148,10 +148,11 @@ class EvaluationComparisonTests(unittest.TestCase):
         phrase_hits: int,
     ) -> dict[str, object]:
         return {
-            "schema_version": 2,
-            "evaluation_protocol": "openwakeword-streaming-v1",
+            "schema_version": 3,
+            "evaluation_protocol": "openwakeword-streaming-v2",
             "split": "test",
             "threshold": 0.70,
+            "vad_threshold": 0.10,
             "warmup_ms": 2080,
             "built_in_wav_tail_ms": 400,
             "additional_tail_ms": 0,

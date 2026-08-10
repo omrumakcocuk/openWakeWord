@@ -31,6 +31,7 @@ _verifier_stub.train_custom_verifier = _verifier_not_enabled  # type: ignore[att
 sys.modules.setdefault("openwakeword.custom_verifier_model", _verifier_stub)
 
 from openwakeword.model import Model
+from openwakeword.vad import VAD
 
 
 ROOT = Path(__file__).resolve().parent
@@ -50,6 +51,7 @@ MODEL_PRIME_CHUNKS = MELSPECTROGRAM_CONTEXT_CHUNKS + MODEL_CONTEXT_CHUNKS
 DEFAULT_THRESHOLD = 0.70
 DEFAULT_COOLDOWN_SECONDS = 2.0
 DEFAULT_CONFIRMATION_FRAMES = 1
+DEFAULT_VAD_THRESHOLD = 0.10
 DEFAULT_RELEASE_THRESHOLD = 0.30
 DEFAULT_REARM_FRAMES = 5
 TIME_COMPARISON_ABS_TOLERANCE = 1e-12
@@ -162,6 +164,11 @@ def validate_detection_settings(
         raise ValueError("--rearm-frames en az 1 olmalı")
 
 
+def validate_vad_threshold(vad_threshold: float) -> None:
+    if not math.isfinite(vad_threshold) or not 0 <= vad_threshold <= 1:
+        raise ValueError("--vad-threshold 0 ile 1 arasında sonlu bir sayı olmalı")
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Mikrofonda Türkçe 'Hey Orbit' uyandırma ifadesini dinler."
@@ -225,6 +232,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--vad-threshold",
+        type=float,
+        default=DEFAULT_VAD_THRESHOLD,
+        help=(
+            "Konuşma etkinliği eşiği; 0 filtreyi kapatır "
+            f"(varsayılan: {DEFAULT_VAD_THRESHOLD:.2f})"
+        ),
+    )
+    parser.add_argument(
         "--list-devices",
         action="store_true",
         help="ALSA kayıt aygıtlarını göster ve çık",
@@ -243,6 +259,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             args.release_threshold,
             args.rearm_frames,
         )
+        validate_vad_threshold(args.vad_threshold)
     except ValueError as exc:
         parser.error(str(exc))
     return args
@@ -335,12 +352,19 @@ def wav_chunks(path: Path) -> Iterator[np.ndarray]:
             yield np.zeros(CHUNK_SAMPLES, dtype=np.int16)
 
 
-def build_model(model_path: Path) -> Model:
+def build_model(
+    model_path: Path,
+    vad_threshold: float = DEFAULT_VAD_THRESHOLD,
+) -> Model:
+    validate_vad_threshold(vad_threshold)
     required = [
         model_path,
         MODELS_DIR / "melspectrogram.onnx",
         MODELS_DIR / "embedding_model.onnx",
     ]
+    vad_model_path = MODELS_DIR / "silero_vad.onnx"
+    if vad_threshold > 0:
+        required.append(vad_model_path)
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise FileNotFoundError(
@@ -350,12 +374,18 @@ def build_model(model_path: Path) -> Model:
             + "Ayrıntılar için MODEL_EGITIMI.md dosyasına bakın."
         )
 
-    return Model(
+    model = Model(
         wakeword_models=[str(model_path)],
         inference_framework="onnx",
         melspec_model_path=str(MODELS_DIR / "melspectrogram.onnx"),
         embedding_model_path=str(MODELS_DIR / "embedding_model.onnx"),
     )
+    if vad_threshold > 0:
+        # openWakeWord paketindeki varsayılan VAD yolu kurulum biçimine bağlıdır.
+        # Repoda hash'i sabitlenmiş yerel modeli açıkça kullan.
+        model.vad_threshold = vad_threshold
+        model.vad = VAD(model_path=str(vad_model_path))
+    return model
 
 
 def score_as_float(value: object) -> float:
@@ -377,10 +407,26 @@ def best_prediction(predictions: Mapping[str, object]) -> tuple[str, float]:
     )
 
 
+def aligned_vad_score(model: Model) -> float | None:
+    """openWakeWord'ün mevcut wake skoru için kullandığı hizalı VAD skorunu döndür."""
+
+    vad = getattr(model, "vad", None)
+    if vad is None:
+        return None
+    frames = list(vad.prediction_buffer)[-7:-4]
+    if not frames:
+        return 0.0
+    return max(float(value) for value in frames)
+
+
 def reset_and_prime_model(model: Model) -> None:
     """Rastgele reset bağlamını deterministik sessizlikle tamamen değiştir."""
 
     model.reset()
+    vad = getattr(model, "vad", None)
+    if vad is not None:
+        vad.reset_states()
+        vad.prediction_buffer.clear()
     silence = np.zeros(CHUNK_SAMPLES, dtype=np.int16)
     for _ in range(MODEL_PRIME_CHUNKS):
         model.predict(silence)
@@ -400,12 +446,16 @@ def main() -> int:
         if args.list_devices:
             return list_devices()
 
-        model = build_model(args.model.resolve())
+        model = build_model(args.model.resolve(), vad_threshold=args.vad_threshold)
         reset_and_prime_model(model)
         chunks = wav_chunks(args.wav.resolve()) if args.wav else microphone_chunks(args.device)
         source = str(args.wav) if args.wav else (args.device or "varsayılan mikrofon")
         print(f"Dinleniyor: {source}")
         print(f"Model: {args.model.name} | eşik: {args.threshold:.2f}")
+        if args.vad_threshold > 0:
+            print(f"Konuşma etkinliği filtresi: {args.vad_threshold:.2f} (muhafazakâr)")
+        else:
+            print("Konuşma etkinliği filtresi kapalı")
         if args.confirmation_frames == 1:
             print("Ardışık kare doğrulaması yok (tek kare)")
         else:
@@ -434,9 +484,11 @@ def main() -> int:
             best_name, best_score = best_prediction(predictions)
 
             if detection_gate.observe(best_name, best_score, event_time):
+                vad_score = aligned_vad_score(model)
+                vad_text = "" if vad_score is None else f", VAD {vad_score:.3f}"
                 print(
                     f"\r[{time.strftime('%H:%M:%S')}] UYANDIRMA SÖZCÜĞÜ ALGILANDI: "
-                    f"{best_name} ({best_score:.3f}){' ' * 12}"
+                    f"{best_name} ({best_score:.3f}{vad_text}){' ' * 12}"
                 )
                 # Algılanan ifadenin ses/model bağlamı sonraki kararı etkilemesin.
                 reset_and_prime_model(model)

@@ -17,8 +17,9 @@
     "tp": 1625
   },
   "deterministic_streaming_evaluation": {
-    "evaluation_protocol": "openwakeword-streaming-v1",
+    "evaluation_protocol": "openwakeword-streaming-v2",
     "threshold": 0.7,
+    "vad_threshold": 0.1,
     "warmup_ms": 2080,
     "wav_tail_ms": 400,
     "test": {
@@ -39,7 +40,7 @@
       "evaluation_set_sha256": "470d0f53fe426243c806aecb9c965349cc94ce2e7cfa6466e1418af6051a100a",
       "positive_hits": 262,
       "positive_examples": 270,
-      "false_positive_hits": 28,
+      "false_positive_hits": 27,
       "negative_examples": 186,
       "report": "models/evaluation/hey_orbit_all.json"
     }

@@ -19,6 +19,7 @@ from wake_word import (
     CHUNK_DURATION_SECONDS,
     CHUNK_SAMPLES,
     DEFAULT_MODEL,
+    DEFAULT_VAD_THRESHOLD,
     MODEL_PRIME_CHUNKS,
     WAV_TAIL_DURATION_SECONDS,
     build_model,
@@ -56,6 +57,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
     parser.add_argument("--threshold", type=float, default=0.70)
     parser.add_argument(
+        "--vad-threshold",
+        type=float,
+        default=DEFAULT_VAD_THRESHOLD,
+        help="Canlı uygulamayla aynı Silero konuşma etkinliği eşiği",
+    )
+    parser.add_argument(
         "--split",
         choices=(*VALID_SPLITS, "all"),
         default="test",
@@ -71,6 +78,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if not 0 <= args.threshold <= 1:
         parser.error("--threshold 0 ile 1 arasında olmalı")
+    if not math.isfinite(args.vad_threshold) or not 0 <= args.vad_threshold <= 1:
+        parser.error("--vad-threshold 0 ile 1 arasında sonlu bir sayı olmalı")
     if args.tail_ms < 0:
         parser.error("--tail-ms negatif olamaz")
     return args
@@ -118,6 +127,7 @@ def build_summary(
     evaluation_set_hash: str,
     warmup_ms: int,
     extra_tail_ms: int,
+    vad_threshold: float,
 ) -> dict[str, object]:
     total_positive = total_negative = positive_hits = negative_hits = 0
     per_phrase: list[dict[str, object]] = []
@@ -149,8 +159,8 @@ def build_summary(
     precision = tp / (tp + fp) if tp + fp else None
     accuracy = (tp + tn) / (total_positive + total_negative)
     return {
-        "schema_version": 2,
-        "evaluation_protocol": "openwakeword-streaming-v1",
+        "schema_version": 3,
+        "evaluation_protocol": "openwakeword-streaming-v2",
         "model": str(model_path),
         "model_sha256": model_sha256,
         "manifest": str(manifest_path),
@@ -158,6 +168,7 @@ def build_summary(
         "evaluation_set_sha256": evaluation_set_hash,
         "split": split,
         "threshold": threshold,
+        "vad_threshold": vad_threshold,
         "warmup_ms": warmup_ms,
         "built_in_wav_tail_ms": round(WAV_TAIL_DURATION_SECONDS * 1000),
         "additional_tail_ms": extra_tail_ms,
@@ -180,7 +191,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     manifest_path = args.manifest.resolve()
     model_hash = sha256_file(model_path)
     manifest_hash = sha256_file(manifest_path)
-    model = build_model(model_path)
+    model = build_model(model_path, vad_threshold=args.vad_threshold)
     manifest = load_manifest(manifest_path)
     selected = [item for item in manifest if args.split == "all" or item.split == args.split]
     if not selected:
@@ -210,6 +221,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         evaluation_set_hash=evaluation_hash,
         warmup_ms=MODEL_PRIME_CHUNKS * CHUNK_MS,
         extra_tail_ms=extra_tail_chunks * CHUNK_MS,
+        vad_threshold=args.vad_threshold,
     )
     if sha256_file(model_path) != model_hash:
         raise RuntimeError("Model dosyası değerlendirme sırasında değişti; rapor yazılmadı")

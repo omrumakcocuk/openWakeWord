@@ -26,6 +26,7 @@ class ParseArgsTests(unittest.TestCase):
         self.assertEqual(args.threshold, 0.70)
         self.assertEqual(args.confirmation_frames, 1)
         self.assertEqual(args.cooldown, 2.0)
+        self.assertEqual(args.vad_threshold, 0.10)
         self.assertEqual(args.release_threshold, 0.30)
         self.assertEqual(args.rearm_frames, 5)
 
@@ -40,6 +41,8 @@ class ParseArgsTests(unittest.TestCase):
             ("--cooldown", "inf"),
             ("--release-threshold", "nan"),
             ("--release-threshold", "inf"),
+            ("--vad-threshold", "nan"),
+            ("--vad-threshold", "inf"),
         ):
             with self.subTest(option=option, value=value):
                 self.parse_error(option, value)
@@ -51,6 +54,8 @@ class ParseArgsTests(unittest.TestCase):
         self.parse_error("--release-threshold", "0.70")
         self.parse_error("--release-threshold", "-0.01")
         self.parse_error("--rearm-frames", "0")
+        self.parse_error("--vad-threshold", "-0.01")
+        self.parse_error("--vad-threshold", "1.01")
 
 
 class DetectionGateTests(unittest.TestCase):
@@ -159,6 +164,58 @@ class ModelPrimingTests(unittest.TestCase):
             self.assertEqual(samples.shape, (wake_word.CHUNK_SAMPLES,))
             self.assertFalse(np.any(samples))
 
+    def test_reset_also_clears_vad_state_and_history(self) -> None:
+        class FakeBuffer(list[float]):
+            def clear(self) -> None:
+                super().clear()
+
+        class FakeVad:
+            def __init__(self) -> None:
+                self.reset_calls = 0
+                self.prediction_buffer = FakeBuffer([0.8, 0.9])
+
+            def reset_states(self) -> None:
+                self.reset_calls += 1
+
+        class FakeModel:
+            def __init__(self) -> None:
+                self.vad = FakeVad()
+
+            def reset(self) -> None:
+                pass
+
+            def predict(self, _samples: np.ndarray) -> dict[str, float]:
+                return {"hey_orbit": 0.0}
+
+        model = FakeModel()
+
+        wake_word.reset_and_prime_model(model)  # type: ignore[arg-type]
+
+        self.assertEqual(model.vad.reset_calls, 1)
+        self.assertEqual(model.vad.prediction_buffer, [])
+
+
+class ModelConstructionTests(unittest.TestCase):
+    def test_build_model_attaches_repository_vad_when_enabled(self) -> None:
+        fake_model = mock.Mock()
+        fake_vad = mock.Mock()
+
+        with (
+            mock.patch.object(wake_word, "Model", return_value=fake_model),
+            mock.patch.object(wake_word, "VAD", return_value=fake_vad) as vad_class,
+        ):
+            result = wake_word.build_model(
+                wake_word.DEFAULT_MODEL,
+                vad_threshold=0.10,
+            )
+
+        self.assertIs(result, fake_model)
+        self.assertEqual(fake_model.vad_threshold, 0.10)
+        self.assertIs(fake_model.vad, fake_vad)
+        vad_class.assert_called_once_with(
+            model_path=str(wake_word.MODELS_DIR / "silero_vad.onnx")
+        )
+
 
 class AudioTimelineTests(unittest.TestCase):
     def test_wav_frame_time_uses_audio_duration(self) -> None:
@@ -175,6 +232,7 @@ class AudioTimelineTests(unittest.TestCase):
             confirmation_frames=1,
             release_threshold=0.30,
             rearm_frames=5,
+            vad_threshold=0.10,
             list_devices=False,
             quiet=True,
         )
@@ -251,6 +309,12 @@ class PredictionTests(unittest.TestCase):
             wake_word.best_prediction({})
         with self.assertRaises(ValueError):
             wake_word.best_prediction({"hey_orbit": float("nan")})
+
+    def test_aligned_vad_score_matches_openwakeword_window(self) -> None:
+        model = mock.Mock()
+        model.vad.prediction_buffer = list(range(10))
+
+        self.assertEqual(wake_word.aligned_vad_score(model), 5.0)
 
 
 if __name__ == "__main__":

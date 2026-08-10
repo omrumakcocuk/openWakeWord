@@ -138,6 +138,12 @@ yeniden eğitilebilir. Uygulamanın varsayılan çalışma eşiği `0.70` değer
 .venv/bin/python wake_word.py --threshold 0.70
 ```
 
+Çalışma zamanı ayrıca yerel `models/silero_vad.onnx` modelini muhafazakâr
+`0.10` eşiğiyle kullanır. Ses sinyalini değiştirmeyen bu kapı, konuşma etkinliği
+olmayan karelerdeki yanlış wake-word skorlarını reddeder. `--vad-threshold 0`
+filtreyi kapatır; eşiği yükseltmeden önce gerçek ve kısık pozitif kayıtlarla
+recall yeniden ölçülmelidir.
+
 İlk tetiklemenin ardından art arda yanlış algılamayı önlemek için çalışma
 zamanı kapısı, skor `0.30` altında beş kare kalmadan yeniden kurulmaz. Bu ayar
 ilk tetiklemenin recall değerini değiştirmez; gerekirse

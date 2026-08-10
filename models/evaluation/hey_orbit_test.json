@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "evaluation_protocol": "openwakeword-streaming-v1",
+  "schema_version": 3,
+  "evaluation_protocol": "openwakeword-streaming-v2",
   "evaluation_role": "post_training_synthetic_regression_reference",
   "independent_holdout": false,
   "dataset_generated_after_model": true,
@@ -12,6 +12,7 @@
   "evaluation_set_sha256": "115abc626f24c86719af61ffb5cab752ba95e932210098411362311fc104c474",
   "split": "test",
   "threshold": 0.7,
+  "vad_threshold": 0.1,
   "warmup_ms": 2080,
   "built_in_wav_tail_ms": 400,
   "additional_tail_ms": 0,
@@ -125,10 +126,10 @@
       "text": "Akşam yemeği için ne hazırlayalım?",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 5.930662155151367e-06,
-      "mean_score": 5.930662155151367e-06,
-      "median_score": 5.930662155151367e-06,
-      "maximum_score": 5.930662155151367e-06
+      "minimum_score": 2.9802322387695312e-08,
+      "mean_score": 2.9802322387695312e-08,
+      "median_score": 2.9802322387695312e-08,
+      "maximum_score": 2.9802322387695312e-08
     },
     {
       "label": 0,
@@ -205,10 +206,10 @@
       "text": "Kahve hazır olunca bana haber ver.",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 5.185604095458984e-06,
-      "mean_score": 5.185604095458984e-06,
-      "median_score": 5.185604095458984e-06,
-      "maximum_score": 5.185604095458984e-06
+      "minimum_score": 1.5497207641601562e-06,
+      "mean_score": 1.5497207641601562e-06,
+      "median_score": 1.5497207641601562e-06,
+      "maximum_score": 1.5497207641601562e-06
     },
     {
       "label": 0,
@@ -245,20 +246,20 @@
       "text": "Pencereyi açınca oda serinledi.",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 0.0003814697265625,
-      "mean_score": 0.0003814697265625,
-      "median_score": 0.0003814697265625,
-      "maximum_score": 0.0003814697265625
+      "minimum_score": 5.960464477539062e-07,
+      "mean_score": 5.960464477539062e-07,
+      "median_score": 5.960464477539062e-07,
+      "maximum_score": 5.960464477539062e-07
     },
     {
       "label": 0,
       "text": "Saat kaçta yola çıkmamız gerekiyor?",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 5.3942203521728516e-06,
-      "mean_score": 5.3942203521728516e-06,
-      "median_score": 5.3942203521728516e-06,
-      "maximum_score": 5.3942203521728516e-06
+      "minimum_score": 2.9802322387695312e-08,
+      "mean_score": 2.9802322387695312e-08,
+      "median_score": 2.9802322387695312e-08,
+      "maximum_score": 2.9802322387695312e-08
     },
     {
       "label": 0,
@@ -405,10 +406,10 @@
       "text": "hey hey",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 5.0961971282958984e-06,
-      "mean_score": 5.0961971282958984e-06,
-      "median_score": 5.0961971282958984e-06,
-      "maximum_score": 5.0961971282958984e-06
+      "minimum_score": 9.238719940185547e-07,
+      "mean_score": 9.238719940185547e-07,
+      "median_score": 9.238719940185547e-07,
+      "maximum_score": 9.238719940185547e-07
     },
     {
       "label": 0,
@@ -445,10 +446,10 @@
       "text": "hey kurbit",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 0.0590665340423584,
-      "mean_score": 0.0590665340423584,
-      "median_score": 0.0590665340423584,
-      "maximum_score": 0.0590665340423584
+      "minimum_score": 0.0009678006172180176,
+      "mean_score": 0.0009678006172180176,
+      "median_score": 0.0009678006172180176,
+      "maximum_score": 0.0009678006172180176
     },
     {
       "label": 0,
@@ -725,10 +726,10 @@
       "text": "tamam orbit",
       "examples": 1,
       "threshold_hits": 0,
-      "minimum_score": 5.3942203521728516e-06,
-      "mean_score": 5.3942203521728516e-06,
-      "median_score": 5.3942203521728516e-06,
-      "maximum_score": 5.3942203521728516e-06
+      "minimum_score": 2.7120113372802734e-06,
+      "mean_score": 2.7120113372802734e-06,
+      "median_score": 2.7120113372802734e-06,
+      "maximum_score": 2.7120113372802734e-06
     },
     {
       "label": 0,

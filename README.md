@@ -94,6 +94,16 @@ Varsayılan algılama eşiği `0.70`'tir:
 .venv/bin/python wake_word.py --threshold 0.70
 ```
 
+Silero konuşma etkinliği filtresi varsayılan olarak muhafazakâr `0.10`
+eşiğiyle açıktır. Bu filtre sesi değiştirmez veya gürültü azaltma uygulamaz;
+yalnız insan sesi etkinliği bulunmayan bir anda çıkan wake-word skorunu
+tetikleme kararından çıkarır. Mevcut sentetik regresyon setinde hedef yakalama
+`27/27` olarak korunmuştur. Sorun giderme amacıyla kapatılabilir:
+
+```bash
+.venv/bin/python wake_word.py --vad-threshold 0
+```
+
 Duyarlılığı değiştirmemek için varsayılan karar tek eşik-üstü kareyle
 verilir. Bir algılamadan sonra ise model skoru `0.30` altında beş kare
 (yaklaşık 400 ms) kalmadan algılayıcı yeniden kurulmaz. Bu histerezis, arka

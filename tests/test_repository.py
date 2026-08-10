@@ -56,9 +56,10 @@ class RepositoryMetadataTests(unittest.TestCase):
     def test_evaluation_protocol_matches_runtime_defaults(self) -> None:
         for path in (TEST_REPORT_PATH, ALL_REPORT_PATH):
             report = load_json(path)
-            self.assertEqual(report["schema_version"], 2)
-            self.assertEqual(report["evaluation_protocol"], "openwakeword-streaming-v1")
+            self.assertEqual(report["schema_version"], 3)
+            self.assertEqual(report["evaluation_protocol"], "openwakeword-streaming-v2")
             self.assertEqual(report["threshold"], wake_word.DEFAULT_THRESHOLD)
+            self.assertEqual(report["vad_threshold"], wake_word.DEFAULT_VAD_THRESHOLD)
             self.assertEqual(
                 report["warmup_ms"],
                 round(

@@ -14,8 +14,8 @@ except ImportError:
     from common import evaluation_set_sha256, load_manifest, sha256_file
 
 
-EXPECTED_SCHEMA_VERSION = 2
-EXPECTED_EVALUATION_PROTOCOL = "openwakeword-streaming-v1"
+EXPECTED_SCHEMA_VERSION = 3
+EXPECTED_EVALUATION_PROTOCOL = "openwakeword-streaming-v2"
 
 
 def load_report(path: Path) -> dict[str, object]:
@@ -123,6 +123,7 @@ def compare_reports(
         "evaluation_protocol",
         "split",
         "threshold",
+        "vad_threshold",
         "warmup_ms",
         "built_in_wav_tail_ms",
         "additional_tail_ms",
