@@ -50,6 +50,8 @@ MODEL_PRIME_CHUNKS = MELSPECTROGRAM_CONTEXT_CHUNKS + MODEL_CONTEXT_CHUNKS
 DEFAULT_THRESHOLD = 0.70
 DEFAULT_COOLDOWN_SECONDS = 2.0
 DEFAULT_CONFIRMATION_FRAMES = 1
+DEFAULT_RELEASE_THRESHOLD = 0.30
+DEFAULT_REARM_FRAMES = 5
 TIME_COMPARISON_ABS_TOLERANCE = 1e-12
 
 
@@ -58,22 +60,28 @@ class DetectionGate:
     """Skorları tetikleme kararına dönüştüren durum makinesi.
 
     Varsayılan ``confirmation_frames=1`` mevcut tek-kare davranışını korur.
-    Daha katı ardışık-kare doğrulaması yalnızca CLI'da açıkça istenirse
-    etkinleşir.
+    Tetiklemeden sonraki histerezis yalnız tekrar algılamaları sınırlar. Daha
+    katı ardışık-kare doğrulaması yalnızca CLI'da açıkça istenirse etkinleşir.
     """
 
     threshold: float = DEFAULT_THRESHOLD
     cooldown_seconds: float = DEFAULT_COOLDOWN_SECONDS
     confirmation_frames: int = DEFAULT_CONFIRMATION_FRAMES
+    release_threshold: float = DEFAULT_RELEASE_THRESHOLD
+    rearm_frames: int = DEFAULT_REARM_FRAMES
     _last_detection: float = field(default=-float("inf"), init=False)
     _candidate_name: str | None = field(default=None, init=False)
     _candidate_frames: int = field(default=0, init=False)
+    _armed: bool = field(default=True, init=False)
+    _release_frames: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         validate_detection_settings(
             self.threshold,
             self.cooldown_seconds,
             self.confirmation_frames,
+            self.release_threshold,
+            self.rearm_frames,
         )
 
     def observe(self, name: str, score: float, timestamp: float) -> bool:
@@ -83,6 +91,20 @@ class DetectionGate:
             raise ValueError("Model skoru sonlu bir sayı olmalı")
         if not math.isfinite(timestamp):
             raise ValueError("Algılama zamanı sonlu bir sayı olmalı")
+
+        # Algılamadan sonra skor belirgin biçimde düşmeden kapıyı tekrar kurma.
+        # Böylece sürekli arka plan sesi yüksek skor üretirse cooldown aralıklarıyla
+        # art arda yanlış tetikleme oluşmaz. İlk algılama bundan etkilenmez.
+        if not self._armed:
+            self._clear_candidate()
+            if score <= self.release_threshold:
+                self._release_frames += 1
+                if self._release_frames >= self.rearm_frames:
+                    self._armed = True
+                    self._release_frames = 0
+            else:
+                self._release_frames = 0
+            return False
 
         # Cooldown sırasındaki yüksek kareler yeni bir aday biriktirmesin.
         elapsed = timestamp - self._last_detection
@@ -109,6 +131,8 @@ class DetectionGate:
             return False
 
         self._last_detection = timestamp
+        self._armed = False
+        self._release_frames = 0
         self._clear_candidate()
         return True
 
@@ -121,6 +145,8 @@ def validate_detection_settings(
     threshold: float,
     cooldown_seconds: float,
     confirmation_frames: int,
+    release_threshold: float = DEFAULT_RELEASE_THRESHOLD,
+    rearm_frames: int = DEFAULT_REARM_FRAMES,
 ) -> None:
     if not math.isfinite(threshold) or not 0 <= threshold <= 1:
         raise ValueError("--threshold 0 ile 1 arasında sonlu bir sayı olmalı")
@@ -128,6 +154,12 @@ def validate_detection_settings(
         raise ValueError("--cooldown sonlu ve negatif olmayan bir sayı olmalı")
     if confirmation_frames < 1:
         raise ValueError("--confirmation-frames en az 1 olmalı")
+    if not math.isfinite(release_threshold) or not 0 <= release_threshold < threshold:
+        raise ValueError(
+            "--release-threshold 0 ile --threshold arasında sonlu bir sayı olmalı"
+        )
+    if rearm_frames < 1:
+        raise ValueError("--rearm-frames en az 1 olmalı")
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -175,6 +207,24 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--release-threshold",
+        type=float,
+        default=DEFAULT_RELEASE_THRESHOLD,
+        help=(
+            "Algılamadan sonra yeniden kurulmak için skorun altına inmesi gereken "
+            f"eşik (varsayılan: {DEFAULT_RELEASE_THRESHOLD:.2f})"
+        ),
+    )
+    parser.add_argument(
+        "--rearm-frames",
+        type=int,
+        default=DEFAULT_REARM_FRAMES,
+        help=(
+            "Yeniden kurulmadan önce gereken art arda düşük skorlu kare sayısı "
+            f"(varsayılan: {DEFAULT_REARM_FRAMES})"
+        ),
+    )
+    parser.add_argument(
         "--list-devices",
         action="store_true",
         help="ALSA kayıt aygıtlarını göster ve çık",
@@ -190,6 +240,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             args.threshold,
             args.cooldown,
             args.confirmation_frames,
+            args.release_threshold,
+            args.rearm_frames,
         )
     except ValueError as exc:
         parser.error(str(exc))
@@ -358,12 +410,18 @@ def main() -> int:
             print("Ardışık kare doğrulaması yok (tek kare)")
         else:
             print(f"Ardışık kare doğrulaması: {args.confirmation_frames} kare")
+        print(
+            "Yeniden kurma: "
+            f"skor <= {args.release_threshold:.2f} için {args.rearm_frames} kare"
+        )
         print("Durdurmak için Ctrl+C tuşlarına basın.\n")
 
         detection_gate = DetectionGate(
             threshold=args.threshold,
             cooldown_seconds=args.cooldown,
             confirmation_frames=args.confirmation_frames,
+            release_threshold=args.release_threshold,
+            rearm_frames=args.rearm_frames,
         )
 
         for frame_index, samples in enumerate(chunks):

@@ -138,6 +138,11 @@ yeniden eğitilebilir. Uygulamanın varsayılan çalışma eşiği `0.70` değer
 .venv/bin/python wake_word.py --threshold 0.70
 ```
 
+İlk tetiklemenin ardından art arda yanlış algılamayı önlemek için çalışma
+zamanı kapısı, skor `0.30` altında beş kare kalmadan yeniden kurulmaz. Bu ayar
+ilk tetiklemenin recall değerini değiştirmez; gerekirse
+`--release-threshold` ve `--rearm-frames` ile kalibre edilebilir.
+
 Eşiği düşürmek yanlış tetikleme riskini artırabilir; yükseltmek ise hedef
 ifadeleri kaçırabilir. Kalıcı eşik değişikliği gerçek pozitif ve uzun süreli
 negatif kayıtlarla birlikte ölçülmelidir.

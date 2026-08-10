@@ -26,6 +26,8 @@ class ParseArgsTests(unittest.TestCase):
         self.assertEqual(args.threshold, 0.70)
         self.assertEqual(args.confirmation_frames, 1)
         self.assertEqual(args.cooldown, 2.0)
+        self.assertEqual(args.release_threshold, 0.30)
+        self.assertEqual(args.rearm_frames, 5)
 
     def test_wav_and_device_are_mutually_exclusive(self) -> None:
         self.parse_error("--wav", "sample.wav", "--device", "hw:1,0")
@@ -36,12 +38,19 @@ class ParseArgsTests(unittest.TestCase):
             ("--threshold", "inf"),
             ("--cooldown", "nan"),
             ("--cooldown", "inf"),
+            ("--release-threshold", "nan"),
+            ("--release-threshold", "inf"),
         ):
             with self.subTest(option=option, value=value):
                 self.parse_error(option, value)
 
     def test_rejects_invalid_confirmation_frame_count(self) -> None:
         self.parse_error("--confirmation-frames", "0")
+
+    def test_rejects_invalid_rearm_settings(self) -> None:
+        self.parse_error("--release-threshold", "0.70")
+        self.parse_error("--release-threshold", "-0.01")
+        self.parse_error("--rearm-frames", "0")
 
 
 class DetectionGateTests(unittest.TestCase):
@@ -82,6 +91,8 @@ class DetectionGateTests(unittest.TestCase):
 
         self.assertFalse(gate.observe("hey_orbit", 0.90, 0.08))
         self.assertTrue(gate.observe("hey_orbit", 0.90, 0.16))
+        for timestamp in (0.24, 0.32, 0.40, 0.48, 0.56):
+            self.assertFalse(gate.observe("hey_orbit", 0.10, timestamp))
         self.assertFalse(gate.observe("hey_orbit", 0.90, 1.00))
         self.assertFalse(gate.observe("hey_orbit", 0.90, 2.16))
         self.assertTrue(gate.observe("hey_orbit", 0.90, 2.24))
@@ -90,8 +101,29 @@ class DetectionGateTests(unittest.TestCase):
         gate = wake_word.DetectionGate(cooldown_seconds=2.0)
 
         self.assertTrue(gate.observe("hey_orbit", 0.90, 0.32))
+        for timestamp in (0.40, 0.48, 0.56, 0.64, 0.72):
+            self.assertFalse(gate.observe("hey_orbit", 0.10, timestamp))
         # 2.32 - 0.32 ikili kayan noktada 2.0'ın çok az altında kalabilir.
         self.assertTrue(gate.observe("hey_orbit", 0.90, 2.32))
+
+    def test_continuous_high_score_cannot_retrigger_after_cooldown(self) -> None:
+        gate = wake_word.DetectionGate(cooldown_seconds=2.0)
+
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 0.08))
+        for timestamp in (0.16, 1.00, 2.08, 3.00, 10.00):
+            self.assertFalse(gate.observe("hey_orbit", 0.90, timestamp))
+
+    def test_rearm_requires_consecutive_low_scores(self) -> None:
+        gate = wake_word.DetectionGate(cooldown_seconds=0, rearm_frames=3)
+
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 0.08))
+        self.assertFalse(gate.observe("hey_orbit", 0.10, 0.16))
+        self.assertFalse(gate.observe("hey_orbit", 0.10, 0.24))
+        self.assertFalse(gate.observe("hey_orbit", 0.40, 0.32))
+        self.assertFalse(gate.observe("hey_orbit", 0.10, 0.40))
+        self.assertFalse(gate.observe("hey_orbit", 0.10, 0.48))
+        self.assertFalse(gate.observe("hey_orbit", 0.10, 0.56))
+        self.assertTrue(gate.observe("hey_orbit", 0.90, 0.64))
 
     def test_rejects_non_finite_observations(self) -> None:
         gate = wake_word.DetectionGate()
@@ -141,6 +173,8 @@ class AudioTimelineTests(unittest.TestCase):
             device=None,
             wav=Path("sample.wav"),
             confirmation_frames=1,
+            release_threshold=0.30,
+            rearm_frames=5,
             list_devices=False,
             quiet=True,
         )

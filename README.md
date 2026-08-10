@@ -95,7 +95,16 @@ Varsayılan algılama eşiği `0.70`'tir:
 ```
 
 Duyarlılığı değiştirmemek için varsayılan karar tek eşik-üstü kareyle
-verilir. İstenirse iki art arda karenin eşiği geçmesi zorunlu tutulabilir:
+verilir. Bir algılamadan sonra ise model skoru `0.30` altında beş kare
+(yaklaşık 400 ms) kalmadan algılayıcı yeniden kurulmaz. Bu histerezis, arka
+plan sesi sürerken aynı yüksek skorun iki saniyede bir tekrar tetiklemesini
+engeller; ilk algılama hassasiyetini değiştirmez. Gerekirse ayarlanabilir:
+
+```bash
+.venv/bin/python wake_word.py --release-threshold 0.30 --rearm-frames 5
+```
+
+İstenirse ayrıca iki art arda karenin eşiği geçmesi zorunlu tutulabilir:
 
 ```bash
 .venv/bin/python wake_word.py --confirmation-frames 2
