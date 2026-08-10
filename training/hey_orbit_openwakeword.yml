@@ -1,0 +1,62 @@
+## openWakeWord 0.6.0 resmî train.py yapılandırması.
+## Çalıştırmadan önce OPENWAKEWORD_EGITIMI.md içindeki veri ve Python
+## gereksinimlerini hazırlayın. Bu dosya mevcut hafif inference akışını değiştirmez.
+
+model_name: "hey_orbit"
+target_phrase:
+  - "HEY    ORBIT"
+  - "HEY ORBIT"
+  - "HeyOrbit"
+  - "heyOrbit!"
+  - "heyorbit"
+  - "hey-orbit"
+  - "Heyorbit"
+  - "Hey, Orbit"
+  - "Hey Orbit!"
+
+# Önceki testlerde gerçekten karıştığı görülen, sınırlı fonetik negatif liste.
+custom_negative_phrases:
+  - "hey robert"
+  - "hey corbett"
+  - "hey rabbit"
+  - "hey or"
+  - "hey"
+  - "orbit"
+  - "orbital"
+  - "orbiting"
+  - "a orbit"
+  - "an orbit"
+  - "the orbit"
+  - "okay orbit"
+
+n_samples: 50000
+n_samples_val: 5000
+tts_batch_size: 50
+augmentation_batch_size: 16
+piper_sample_generator_path: "./training/vendor/piper-sample-generator"
+output_dir: "./training/openwakeword_output"
+
+rir_paths:
+  - "./training/assets/rir"
+
+background_paths:
+  - "./training/assets/background"
+background_paths_duplication_rate:
+  - 1
+
+false_positive_validation_data_path: "./training/assets/features/validation_set_features.npy"
+augmentation_rounds: 2
+
+feature_data_files:
+  "ACAV100M_sample": "./training/assets/features/openwakeword_features_ACAV100M_2000_hrs_16bit.npy"
+
+batch_n_per_class:
+  "ACAV100M_sample": 1024
+  "adversarial_negative": 50
+  "positive": 50
+
+model_type: "dnn"
+layer_size: 32
+steps: 50000
+max_negative_weight: 1500
+target_false_positives_per_hour: 0.2

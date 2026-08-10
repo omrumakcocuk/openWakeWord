@@ -1,0 +1,12 @@
+.venv/
+.train-venv/
+.agents/
+.codex/
+.tools/
+.python/
+.cache/
+trainer/
+training/data/
+training/voices/
+__pycache__/
+*.pyc

@@ -1,0 +1,19 @@
+{
+  "wake_phrase": "Hey Orbit",
+  "language": "tr-TR",
+  "threshold": 0.75,
+  "train_examples": 12416,
+  "validation_examples": 3064,
+  "training_iterations": 36,
+  "accuracy": 0.9236292428198434,
+  "precision": 0.9253986332574032,
+  "recall": 0.9403935185185185,
+  "roc_auc": 0.9725559731231981,
+  "confusion_matrix": {
+    "tn": 1205,
+    "fp": 131,
+    "fn": 103,
+    "tp": 1625
+  },
+  "note": "Sentetik üç Türkçe Piper sesi üzerindeki ayrılmış doğrulama sonuçlarıdır."
+}
